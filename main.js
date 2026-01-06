@@ -192,6 +192,72 @@ function parseExcelData(data) {
     } catch (e) { return []; }
 }
 
+// === TẠO MENU ỨNG DỤNG ===
+function createApplicationMenu() {
+    const template = [
+        {
+            label: 'Tệp (File)',
+            submenu: [
+                { role: 'quit', label: 'Thoát (Exit)' }
+            ]
+        },
+        {
+            label: 'Hiển thị (View)',
+            submenu: [
+                { role: 'reload', label: 'Tải lại trang (Reload)' },
+                { role: 'forceReload', label: 'Tải lại bắt buộc' },
+                { role: 'toggledevtools', label: 'Công cụ lập trình (DevTools)' },
+                { type: 'separator' },
+                { role: 'resetzoom', label: 'Đặt lại thu phóng' },
+                { role: 'zoomin', label: 'Phóng to' },
+                { role: 'zoomout', label: 'Thu nhỏ' },
+                { type: 'separator' },
+                { role: 'togglefullscreen', label: 'Toàn màn hình' }
+            ]
+        },
+        {
+            label: 'Trợ Giúp (Help)',
+            submenu: [
+                {
+                    label: 'Hướng dẫn sử dụng',
+                    click: async () => {
+                        // Mở cửa sổ hướng dẫn mới
+                        const guideWindow = new BrowserWindow({
+                            width: 1024,
+                            height: 800,
+                            autoHideMenuBar: true,
+                            title: 'Hướng dẫn sử dụng V-Manga',
+                            webPreferences: {
+                                nodeIntegration: false,
+                                contextIsolation: true
+                            },
+                            icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
+                        });
+                        
+                        // Xác định đường dẫn file guide.html
+                        const guidePath = app.isPackaged 
+                            ? path.join(__dirname, 'dist', 'guide.html') 
+                            : path.join(__dirname, 'guide.html');
+                        
+                        if (fs.existsSync(guidePath)) {
+                             guideWindow.loadFile(guidePath);
+                        } else {
+                            // Fallback nếu không tìm thấy file
+                            guideWindow.loadURL('data:text/html;charset=utf-8,<h1>Không tìm thấy file hướng dẫn!</h1>');
+                        }
+                    }
+                },
+                { type: 'separator' },
+                { label: 'Phiên bản: 1.0.0', enabled: false },
+                { label: 'Tác giả: V-Manga Team', enabled: false }
+            ]
+        }
+    ];
+
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu);
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400, height: 900,
@@ -199,8 +265,12 @@ function createWindow() {
     icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
     backgroundColor: '#ffffff'
   });
+  
+  // Thiết lập menu thay vì xóa nó
+  createApplicationMenu();
+  
   mainWindow.loadFile(app.isPackaged ? path.join(__dirname, 'dist', 'index.html') : 'index.html');
-  mainWindow.removeMenu();
+  // mainWindow.removeMenu(); // Đã xóa dòng này để hiện menu
 }
 
 app.whenReady().then(() => {
