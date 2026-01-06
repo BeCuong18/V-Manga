@@ -43,10 +43,14 @@ export const Tracker: React.FC<TrackerProps> = (props) => {
         }
     };
 
-    const resolveImagePath = (imgName: string) => {
-        if (!imgName) return null;
-        if (!isDesktop) return null; 
-        return imgName.startsWith('file://') ? imgName : `file://${imgName}`;
+    // Helper to format local file paths for img src
+    const getLocalFileUrl = (filePath: string | undefined) => {
+        if (!filePath) return '';
+        if (!isDesktop) return '';
+        // Normalize slashes
+        const normalized = filePath.replace(/\\/g, '/');
+        // Encode URI to handle spaces and special chars, but valid for file protocol
+        return `file://${encodeURI(normalized)}`;
     };
 
     const renderRefImages = (job: VideoJob) => {
@@ -63,7 +67,7 @@ export const Tracker: React.FC<TrackerProps> = (props) => {
                     <div key={i} className="w-8 h-8 border border-black overflow-hidden bg-gray-200" title={`Ref ${i+1}`}>
                         {isDesktop ? (
                             <img 
-                                src={resolveImagePath(img) || ''} 
+                                src={getLocalFileUrl(img)} 
                                 className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all"
                                 alt="ref"
                             />
@@ -224,7 +228,7 @@ export const Tracker: React.FC<TrackerProps> = (props) => {
                                                 <div className="w-24 h-24 border-2 border-black p-1 bg-white cursor-pointer relative" onClick={() => props.onPlayVideo(job.videoPath!)}>
                                                     {isDesktop ? (
                                                         <img 
-                                                            src={`file://${job.videoPath.replace(/\\/g, '/')}`} 
+                                                            src={getLocalFileUrl(job.videoPath)}
                                                             className="w-full h-full object-contain" 
                                                             onError={(e) => {
                                                                 (e.target as HTMLImageElement).style.display = 'none';

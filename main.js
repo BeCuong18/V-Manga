@@ -114,16 +114,18 @@ function scanVideosInternal(jobs, excelFilePath) {
     const resultFiles = getFilesFromDirectories([rootDir, subDir]);
     
     return jobs.map(job => {
+        // Nếu đã có đường dẫn và file tồn tại, giữ nguyên (ưu tiên performance)
         if (job.videoPath && fs.existsSync(job.videoPath)) return job;
         
         // 1. ƯU TIÊN: Tìm theo cấu trúc Image_{JOB_ID}_{VIDEO_NAME}
         // Ví dụ: Image_Job_1_Manga_Output_1.png
+        // Tìm trong thư mục con trước
         if (job.id && job.videoName) {
-            const specificPattern = `Image_${job.id}_${job.videoName}`;
+            const specificPattern = `Image_${job.id}_${job.videoName}`.toLowerCase();
             
             const specificMatch = resultFiles.find(f => {
-                const nameNoExt = path.parse(f).name;
-                // So sánh chính xác tên file (không tính đuôi mở rộng)
+                const nameNoExt = path.parse(f).name.toLowerCase();
+                // So sánh chính xác tên file (không tính đuôi mở rộng, không phân biệt hoa thường)
                 return nameNoExt === specificPattern;
             });
 
