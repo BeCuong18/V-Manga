@@ -338,11 +338,12 @@ const handleFileOrFolderChange = (event, filePath) => {
             const raw = parseExcelData(buf);
             // Quét lại thư mục để tìm ảnh mới
             const { updatedJobs } = syncStatsAndState(filePath, raw, false);
-            // Gửi dữ liệu mới nhất về frontend
-            // Lưu ý: Chúng ta gửi lại nội dung Excel, nhưng ở frontend App.tsx sẽ merge với state videoPath
-            // Tuy nhiên, để đảm bảo videoPath mới được cập nhật, ta cần cơ chế tốt hơn ở frontend hoặc gửi kèm metadata
-            // Ở đây đơn giản nhất là trigger sự kiện đọc lại file
-            event.sender.send('file-content-updated', { path: filePath, content: buf });
+            // Gửi dữ liệu mới nhất về frontend kèm theo danh sách job đã cập nhật đường dẫn ảnh (updatedJobs/discoveredStatus)
+            event.sender.send('file-content-updated', { 
+                path: filePath, 
+                content: buf, 
+                discoveredStatus: updatedJobs // Gửi kèm kết quả quét file
+            });
         }, 500);
     } catch(e) {}
 };
@@ -350,11 +351,20 @@ const handleFileOrFolderChange = (event, filePath) => {
 ipcMain.on('start-watching-file', (event, filePath) => {
     if (fileWatchers.has(filePath)) return;
     
-    // 1. Quét lần đầu ngay lập tức
-    try { if (fs.existsSync(filePath)) {
-         const raw = parseExcelData(fs.readFileSync(filePath));
-         syncStatsAndState(filePath, raw, true);
-    }} catch (e) {}
+    // 1. Quét lần đầu ngay lập tức và gửi về frontend
+    try { 
+        if (fs.existsSync(filePath)) {
+             const buf = fs.readFileSync(filePath);
+             const raw = parseExcelData(buf);
+             const { updatedJobs } = syncStatsAndState(filePath, raw, true);
+             // Gửi ngay lập tức để frontend hiển thị ảnh nếu đã có
+             event.sender.send('file-content-updated', { 
+                 path: filePath, 
+                 content: buf, 
+                 discoveredStatus: updatedJobs 
+             });
+        }
+    } catch (e) {}
     
     // 2. Watch file Excel
     const fileWatcher = fs.watch(filePath, (ev) => {
@@ -365,7 +375,6 @@ ipcMain.on('start-watching-file', (event, filePath) => {
     fileWatchers.set(filePath, fileWatcher);
 
     // 3. Watch thư mục con chứa ảnh (Manga_Output)
-    // Để khi Tool tạo ảnh xong, App tự cập nhật mà không cần file Excel thay đổi
     const rootDir = path.dirname(filePath);
     const excelNameNoExt = path.basename(filePath, '.xlsx');
     const subDir = path.join(rootDir, excelNameNoExt);
@@ -378,11 +387,8 @@ ipcMain.on('start-watching-file', (event, filePath) => {
         });
         folderWatchers.set(filePath, folderWatcher);
     } else {
-        // Nếu thư mục chưa tồn tại (chưa chạy tool), ta thử watch thư mục cha để bắt sự kiện tạo thư mục con?
-        // Đơn giản hơn: Set interval kiểm tra thư mục con mỗi 5s
         const checkInterval = setInterval(() => {
             if (fs.existsSync(subDir)) {
-                // Thư mục đã xuất hiện, bắt đầu watch và clear interval
                 const folderWatcher = fs.watch(subDir, (ev, filename) => {
                     handleFileOrFolderChange(event, filePath);
                 });
@@ -390,7 +396,6 @@ ipcMain.on('start-watching-file', (event, filePath) => {
                 clearInterval(checkInterval);
             }
         }, 5000);
-        // Lưu interval vào map để cleanup nếu cần (tạm thời bỏ qua cho đơn giản)
     }
 });
 

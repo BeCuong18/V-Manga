@@ -76,11 +76,29 @@ const App: React.FC = () => {
 
     useEffect(() => {
         if (isDesktop && ipcRenderer && isActivated) {
-            ipcRenderer.on('file-content-updated', (_:any, {path, content}:any) => {
+            // Listen for file updates including discovered image paths
+            ipcRenderer.on('file-content-updated', (_:any, {path, content, discoveredStatus}:any) => {
                  const wb = XLSX.read(content, {type:'buffer'});
                  const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, blankrows:false}).slice(1) as any[][];
-                 const jobs: VideoJob[] = parseJobs(data);
+                 let jobs: VideoJob[] = parseJobs(data);
                  
+                 // Merge discovered paths/status from main process (discoveredStatus) into the jobs
+                 if (discoveredStatus && Array.isArray(discoveredStatus)) {
+                     const statusMap = new Map(discoveredStatus.map((j: any) => [j.id, j]));
+                     jobs = jobs.map(job => {
+                         const discovered = statusMap.get(job.id);
+                         if (discovered && discovered.videoPath) {
+                             // Update job with discovered path and mark as completed
+                             return { 
+                                 ...job, 
+                                 videoPath: discovered.videoPath, 
+                                 status: 'Completed' 
+                             };
+                         }
+                         return job;
+                     });
+                 }
+
                  setTrackedFiles(prev => prev.map(f => {
                      if (f.path === path) {
                          // Preserve timestamps for existing jobs if status matches
@@ -173,10 +191,13 @@ const App: React.FC = () => {
             const res = await ipcRenderer.invoke('open-file-dialog');
             if(res.success) {
                 const newFiles = res.files.map((f:any) => {
+                    // Send message to start watcher immediately (which triggers the initial scan callback)
+                    ipcRenderer.send('start-watching-file', f.path);
+                    
+                    // Initial parse from content (paths might be missing until callback returns)
                     const wb = XLSX.read(f.content, {type:'buffer'});
                     const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1}).slice(1) as any[][];
                     const jobs = parseJobs(rawData);
-                    ipcRenderer.send('start-watching-file', f.path);
                     return { name: f.name, path: f.path, jobs };
                 });
                 setTrackedFiles(prev => [...prev, ...newFiles]);
