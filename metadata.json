@@ -1,5 +1,5 @@
 {
-  "name": "Truyện Tranh",
-  "description": "An application to generate professional visual scripts for Music Videos and Live Shows by transforming ideas into detailed prompts for AI video models.",
+  "name": "V-Manga",
+  "description": "Ứng dụng tự động hóa quy trình sản xuất truyện tranh và hình ảnh minh họa bằng AI.",
   "requestFramePermissions": []
 }

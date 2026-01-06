@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tài Liệu Hướng Dẫn - Prompt Generator Pro 2026</title>
+    <title>Tài Liệu Hướng Dẫn - V-Manga</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <script>
@@ -83,7 +83,7 @@
             <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-9xl opacity-[0.03] pointer-events-none select-none">🐉</div>
             <h1 class="text-3xl md:text-5xl text-tet-red-dark mb-4 drop-shadow-sm leading-tight">Tài Liệu Hướng Dẫn & <br/>Khắc Phục Sự Cố</h1>
             <p class="text-sm md:text-lg text-tet-brown font-bold bg-white/50 inline-block px-8 py-2 rounded-full border-2 border-tet-gold shadow-sm">
-                Phiên bản Pro 2026 - Tự động hóa quy trình sản xuất Video
+                Phiên bản V-Manga 2026 - Tự động hóa quy trình sản xuất Truyện Tranh
             </p>
         </div>
 
@@ -215,7 +215,7 @@
                             <h3 className="font-bold text-lg text-stone-800">2. Chế độ Text vs I2V</h3>
                             <ul class="text-sm text-stone-600 space-y-2 mt-2">
                                 <li><strong>TEXT Mode:</strong> Nếu không upload ảnh nào, AI sẽ tự sáng tạo hình ảnh mô tả.</li>
-                                <li><strong>I2V Mode:</strong> Chỉ cần upload 1 ảnh, AI sẽ tự động chuyển sang chế độ Image-to-Video, sử dụng ảnh đó làm tham chiếu (Reference) cho tất cả các cảnh.</li>
+                                <li><strong>I2V Mode:</strong> Chỉ cần upload 1 ảnh, AI sẽ tự động chuyển sang chế độ Image-to-Image, sử dụng ảnh đó làm tham chiếu (Reference).</li>
                             </ul>
                         </div>
                     </div>
@@ -240,7 +240,7 @@
             <div class="space-y-8">
                 <div class="glass-card rounded-[32px] p-8">
                     <h2 class="text-2xl text-tet-brown mb-6 flex items-center gap-2 border-b-2 border-tet-gold/30 pb-3">
-                        <span>🎬</span> Tab Tracker (Xưởng Phim)
+                        <span>🎬</span> Tab Tracker (Xưởng Truyện)
                     </h2>
 
                     <div class="space-y-8">
@@ -250,10 +250,10 @@
                                 <span class="step-badge text-xs">A</span> Cơ chế Auto-Reload
                             </h3>
                             <p class="text-sm text-stone-600 mt-2">
-                                Phần mềm có một bộ đếm chạy ngầm <strong>mỗi 2 giây</strong>. Nó sẽ quét thư mục chứa file Excel để tìm các file video `.mp4` mới được tạo ra.
+                                Phần mềm có một bộ đếm chạy ngầm <strong>mỗi 2 giây</strong>. Nó sẽ quét thư mục chứa file Excel để tìm các file ảnh `.png/.jpg` mới được tạo ra.
                             </p>
                             <p class="text-xs text-stone-500 mt-1 italic">
-                                * Điều kiện nhận diện: File video phải có tên chứa mã Job (VD: `Job_1.mp4`, `MyProject_Job_1.mp4`).
+                                * Điều kiện nhận diện: File ảnh phải có tên chứa mã Job (VD: `Job_1.png`).
                             </p>
                         </div>
 
@@ -263,29 +263,21 @@
                                 <span class="step-badge text-xs">B</span> Kết nối ToolFlows
                             </h3>
                             <div class="mt-2 text-sm text-stone-600 space-y-2">
-                                <p>1. Nhấn icon <span class="bg-stone-200 px-1 rounded">⚙️</span> (Cài đặt) cạnh nút "MỞ TOOLFLOWS".</p>
-                                <p>2. Trỏ đường dẫn đến file <code>ToolFlows.exe</code> (hoặc tool tạo video bất kỳ).</p>
-                                <p>3. Sau đó nhấn nút "MỞ TOOLFLOWS" để khởi chạy tool ngay từ phần mềm.</p>
+                                <p>1. Nhấn icon <span class="bg-stone-200 px-1 rounded">⚙️</span> (Cài đặt) cạnh nút "CHẠY TOOL".</p>
+                                <p>2. Trỏ đường dẫn đến file <code>ToolFlows.exe</code> (hoặc tool tạo ảnh bất kỳ).</p>
+                                <p>3. Sau đó nhấn nút "CHẠY TOOL" để khởi chạy tool ngay từ phần mềm.</p>
                             </div>
                         </div>
 
                         <!-- FFmpeg -->
                         <div>
                             <h3 className="font-bold text-lg text-stone-800 flex items-center gap-2">
-                                <span class="step-badge text-xs">C</span> Ghép Phim (FFmpeg)
+                                <span class="step-badge text-xs">C</span> Quản lý Thư mục
                             </h3>
                             <div class="grid grid-cols-1 gap-3 mt-3">
                                 <div class="border border-tet-green/30 bg-emerald-50/50 p-3 rounded-xl">
-                                    <span class="font-bold text-tet-green block text-xs uppercase mb-1">1. Ghép Thường</span>
-                                    <span class="text-xs text-stone-600">Nối đuôi tất cả video đã hoàn thành thành 1 file dài. Giữ nguyên độ dài gốc của từng clip.</span>
-                                </div>
-                                <div class="border border-blue-200 bg-blue-50/50 p-3 rounded-xl">
-                                    <span class="font-bold text-blue-600 block text-xs uppercase mb-1">2. Ghép Theo Nhạc (Timed)</span>
-                                    <span class="text-xs text-stone-600">Tự động cắt ngắn video output sao cho tổng thời lượng khớp chính xác với số phút/giây bạn đã nhập ở tab Generator.</span>
-                                </div>
-                                <div class="border border-yellow-300 bg-yellow-50/50 p-3 rounded-xl">
-                                    <span class="font-bold text-tet-gold-dark block text-xs uppercase mb-1">3. Ghép Tất Cả (Combine All)</span>
-                                    <span class="text-xs text-stone-600">Duyệt qua danh sách các file Excel đang theo dõi. Nếu file nào có video hoàn thành, nó sẽ tự động ghép và xuất ra thư mục bạn chọn.</span>
+                                    <span class="font-bold text-tet-green block text-xs uppercase mb-1">Mở Thư Mục</span>
+                                    <span class="text-xs text-stone-600">Truy cập nhanh vào folder chứa ảnh kết quả.</span>
                                 </div>
                             </div>
                         </div>
@@ -295,7 +287,7 @@
         </div>
 
         <div class="text-center pt-10 pb-6 border-t border-stone-200/50">
-             <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">© 2026 Prompt Generator Pro | Developed by BeCuong18</p>
+             <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">© 2026 V-Manga | Developed by BeCuong18</p>
         </div>
     </div>
 </body>

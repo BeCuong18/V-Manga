@@ -54,7 +54,7 @@ export const Activation: React.FC<ActivationProps> = ({ machineId, onActivate })
           </div>
           
           <h1 className="text-3xl font-black tracking-tight mb-2 text-stone-700 drop-shadow-sm">
-            Kích Hoạt <span className="text-tet-red">Pro 2026</span>
+            Kích Hoạt <span className="text-tet-red">V-Manga</span>
           </h1>
           <p className="text-stone-400 mb-8 text-sm font-bold">
             Vui lòng nhập mã bản quyền để mở khóa toàn bộ tính năng!
@@ -114,7 +114,7 @@ export const Activation: React.FC<ActivationProps> = ({ machineId, onActivate })
           </form>
 
           <div className="mt-8 pt-6 border-t border-stone-100">
-             <p className="text-[10px] text-stone-300 font-bold uppercase tracking-widest">© 2026 Prompt Generator Pro</p>
+             <p className="text-[10px] text-stone-300 font-bold uppercase tracking-widest">© 2026 V-Manga</p>
           </div>
         </div>
       </div>

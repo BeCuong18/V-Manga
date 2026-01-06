@@ -50,10 +50,10 @@ export const Tracker: React.FC<TrackerProps> = (props) => {
     };
 
     const renderRefImages = (job: VideoJob) => {
-        const images = [
+        const images: string[] = [
             job.imagePath, job.imagePath2, job.imagePath3, job.imagePath4, job.imagePath5,
             job.imagePath6, job.imagePath7, job.imagePath8, job.imagePath9, job.imagePath10
-        ].filter(Boolean);
+        ].filter((img): img is string => !!img);
 
         if (images.length === 0) return <span className="text-xs text-gray-400 font-mono">NO REF</span>;
 
@@ -249,12 +249,12 @@ export const Tracker: React.FC<TrackerProps> = (props) => {
                                                      <button 
                                                         onClick={() => props.onPlayVideo(job.videoPath!)} 
                                                         className="p-2 border border-black bg-white hover:bg-black hover:text-white transition"
-                                                        title="Mở file"
+                                                        title="Mở Ảnh"
                                                     >
                                                         <ExternalLinkIcon className="w-4 h-4"/>
                                                     </button>
                                                     <button 
-                                                        onClick={() => { if(confirm('Xóa file kết quả và đặt lại trạng thái?')) props.onDeleteVideo(job.id, job.videoPath!, activeFileIndex); }} 
+                                                        onClick={() => { if(confirm('Xóa ảnh kết quả và đặt lại trạng thái?')) props.onDeleteVideo(job.id, job.videoPath!, activeFileIndex); }} 
                                                         className="p-2 border border-black bg-white hover:bg-red-600 hover:text-white transition"
                                                         title="Xóa & Làm lại"
                                                     >

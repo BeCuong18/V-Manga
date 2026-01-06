@@ -1,4 +1,5 @@
-const CACHE_NAME = 'prompt-generator-pro-v1';
+
+const CACHE_NAME = 'v-manga-v1';
 
 // On install, we don't pre-cache anything besides the main page.
 // The rest will be cached on demand.

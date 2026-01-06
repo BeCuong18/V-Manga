@@ -1,8 +1,8 @@
 
 {
-  "name": "prompt-generator-pro",
-  "version": "1.2.3",
-  "description": "An application to generate professional visual scripts for Music Videos and Live Shows by transforming ideas into detailed prompts for AI video models.",
+  "name": "v-manga",
+  "version": "1.0.0",
+  "description": "Ứng dụng tự động hóa quy trình sản xuất truyện tranh và hình ảnh minh họa bằng AI.",
   "main": "main.js",
   "homepage": "./",
   "scripts": {
@@ -12,7 +12,7 @@
     "start": "npm run build && electron .",
     "dist": "npm run build && electron-builder --publish always"
   },
-  "author": "Prompt Generator Pro",
+  "author": "V-Manga Team",
   "license": "UNLICENSED",
   "dependencies": {
     "@google/genai": "^1.30.0",
@@ -34,13 +34,13 @@
     "vite": "^5.0.12"
   },
   "build": {
-    "appId": "com.promptgenerator.pro",
-    "productName": "Prompt Generator Pro",
+    "appId": "com.vmanga.app",
+    "productName": "V-Manga",
     "publish": [
       {
         "provider": "github",
         "owner": "BeCuong18",
-        "repo": "App_video"
+        "repo": "V-Manga"
       }
     ],
     "files": [

@@ -4,7 +4,6 @@ import * as XLSX from 'xlsx';
 import { TrackedFile, VideoJob } from './types';
 import { MangaProcessor } from './components/Generator';
 import { Tracker } from './components/Tracker';
-import { ChartIcon, FolderIcon, CogIcon } from './components/Icons';
 import { isElectron, getIpcRenderer } from './utils/platform';
 
 const App: React.FC = () => {
@@ -211,11 +210,11 @@ const App: React.FC = () => {
                 <div className="absolute bottom-[-4px] left-0 w-full h-[4px] bg-black"></div>
                 <div className="flex items-center gap-4 cursor-pointer" onClick={() => setActiveTab('generator')}>
                     <div className="bg-black text-white p-2 border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,0.2)] transform -rotate-3">
-                        <span className="text-3xl font-comic">M</span>
+                        <span className="text-3xl font-comic">V</span>
                     </div>
                     <div>
-                        <h1 className="text-3xl font-comic uppercase tracking-widest leading-none">Manga <span className="text-manga-accent">Studio</span></h1>
-                        <span className="text-xs font-bold bg-black text-white px-2 py-0.5">Automated Pipeline</span>
+                        <h1 className="text-3xl font-comic uppercase tracking-widest leading-none">V-<span className="text-manga-accent">Manga</span></h1>
+                        <span className="text-xs font-bold bg-black text-white px-2 py-0.5">AI Comic Automation</span>
                     </div>
                 </div>
 

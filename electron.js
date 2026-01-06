@@ -1,3 +1,4 @@
+
 // electron.js
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
@@ -38,7 +39,7 @@ app.whenReady().then(() => {
     }
 
     const result = await dialog.showSaveDialog(mainWindow, {
-        title: 'Lưu Kịch Bản Prompt',
+        title: 'Lưu File V-Manga',
         defaultPath: defaultPath,
         filters: [{ name: 'Excel Workbook', extensions: ['xlsx'] }]
     });

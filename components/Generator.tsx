@@ -305,7 +305,7 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
                     {/* Output Configuration */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t-2 border-dashed border-gray-300">
                         <div className="flex flex-col gap-2">
-                            <label className="font-bold uppercase tracking-wider text-sm">3. Tên File Kết Quả</label>
+                            <label className="font-bold uppercase tracking-wider text-sm">3. Tên Ảnh Kết Quả</label>
                             <input 
                                 type="text" 
                                 value={outputFileName}
@@ -313,7 +313,7 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
                                 className="border-2 border-black p-3 font-bold"
                                 placeholder="VD: Manga_Tap1"
                             />
-                            <span className="text-[10px] text-gray-500 italic">* Ảnh kết quả sẽ được đặt tên: {outputFileName.replace(/\.xlsx$/i, '')}_1.png, {outputFileName.replace(/\.xlsx$/i, '')}_2.png...</span>
+                            <span className="text-[10px] text-gray-500 italic">* Ảnh sẽ được đặt tên: {outputFileName.replace(/\.xlsx$/i, '')}_1.png, {outputFileName.replace(/\.xlsx$/i, '')}_2.png...</span>
                         </div>
                         <div className="flex flex-col gap-2">
                             <label className="font-bold uppercase tracking-wider text-sm">4. Thư mục lưu kết quả</label>

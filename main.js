@@ -144,7 +144,7 @@ ipcMain.handle('get-app-config', () => readConfig());
 ipcMain.handle('save-app-config', async (e, cfg) => { writeConfig({ ...readConfig(), ...cfg }); return { success: true }; });
 
 ipcMain.handle('save-file-dialog', async (event, { defaultPath, fileContent }) => {
-    const res = await dialog.showSaveDialog(mainWindow, { title: 'Lưu File Manga Job', defaultPath, filters: [{ name: 'Excel', extensions: ['xlsx'] }] });
+    const res = await dialog.showSaveDialog(mainWindow, { title: 'Lưu File V-Manga', defaultPath, filters: [{ name: 'Excel', extensions: ['xlsx'] }] });
     if (res.filePath) {
         fs.writeFileSync(res.filePath, Buffer.from(fileContent));
         return { success: true, filePath: res.filePath };
