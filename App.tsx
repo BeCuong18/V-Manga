@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { TrackedFile, VideoJob } from './types';
@@ -17,7 +16,6 @@ const App: React.FC = () => {
     const [ffmpegFound, setFfmpegFound] = useState<boolean | null>(null);
 
     // Update States
-    const [updateAvailable, setUpdateAvailable] = useState(false);
     const [updateDownloaded, setUpdateDownloaded] = useState(false);
 
     // Activation State
@@ -63,7 +61,6 @@ const App: React.FC = () => {
                             setFeedback({ type: 'info', message: 'Đang kiểm tra bản cập nhật...' });
                         } else if (data.type === 'available') {
                             setFeedback({ type: 'success', message: 'Đang tải bản cập nhật mới...' });
-                            setUpdateAvailable(true);
                         } else if (data.type === 'not-available') {
                             // Optional: only show if manually checked, but here we just ignore or show brief info
                         } else if (data.type === 'downloaded') {
@@ -125,7 +122,7 @@ const App: React.FC = () => {
                  setTrackedFiles(prev => prev.map(f => {
                      if (f.path === path) {
                          // Preserve timestamps for existing jobs if status matches
-                         const oldJobsMap = new Map(f.jobs.map(j => [j.id, j]));
+                         const oldJobsMap = new Map<string, VideoJob>(f.jobs.map(j => [j.id, j]));
                          const mergedJobs = jobs.map(newJob => {
                              const oldJob = oldJobsMap.get(newJob.id);
                              if (oldJob && oldJob.status === newJob.status) {

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { UploadIcon, FolderIcon, CheckIcon, LoaderIcon, CopyIcon } from './Icons';
@@ -70,7 +69,7 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
     const handleWebFolderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (files && files.length > 0) {
-            const fileList = Array.from(files).map(f => ({
+            const fileList = Array.from(files).map((f: File) => ({
                 name: f.name,
                 fullPath: f.name 
             }));
