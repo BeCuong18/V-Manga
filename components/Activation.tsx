@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { LoaderIcon, CopyIcon, CheckIcon } from './Icons';
+import { LoaderIcon, CopyIcon, CheckIcon, KeyIcon, LockIcon } from './Icons';
 
 interface ActivationProps {
   machineId: string;
@@ -22,7 +22,7 @@ export const Activation: React.FC<ActivationProps> = ({ machineId, onActivate })
     setIsActivating(true);
     const success = await onActivate(key.trim());
     if (!success) {
-      setError('Mã kích hoạt không chính xác hoặc không hợp lệ. Vui lòng liên hệ hỗ trợ.');
+      setError('Mã kích hoạt không hợp lệ!');
     }
     setIsActivating(false);
   };
@@ -44,77 +44,96 @@ export const Activation: React.FC<ActivationProps> = ({ machineId, onActivate })
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative z-[100] bg-tet-cream">
-      <div className="w-full max-w-md mx-auto">
-        <div className="glass-card rounded-[40px] p-10 shadow-2xl text-center border-4 border-white relative overflow-hidden bg-white/95">
-          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-tet-red via-tet-gold to-tet-green"></div>
+    <div className="min-h-screen flex items-center justify-center p-4 relative bg-white overflow-hidden font-comic">
+      {/* Background decoration */}
+      <div className="absolute inset-0 z-0 opacity-10 bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:20px_20px]"></div>
+      
+      <div className="w-full max-w-lg mx-auto relative z-10">
+        {/* Main Card */}
+        <div className="bg-white border-4 border-black shadow-[8px_8px_0px_#000] p-8 md:p-10 relative">
           
-          <div className="mb-6 inline-block p-6 rounded-full bg-red-50 border-4 border-red-100 shadow-sm animate-wiggle">
-            <span className="text-6xl drop-shadow-sm filter contrast-125">🏮</span>
+          {/* Decorative Header Badge */}
+          <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-manga-accent text-white px-6 py-2 border-4 border-black shadow-[4px_4px_0px_#000] rotate-[-2deg] z-20">
+            <h2 className="text-xl font-black uppercase tracking-widest whitespace-nowrap">Authentication</h2>
+          </div>
+
+          <div className="mt-6 text-center mb-8">
+            <h1 className="text-4xl font-display uppercase leading-none mb-2">
+              Kích Hoạt <br/><span className="text-stroke-1 text-transparent bg-clip-text bg-black">Phần Mềm</span>
+            </h1>
+            <p className="text-sm font-bold bg-black text-white inline-block px-2 py-1 transform rotate-1">
+              Vui lòng nhập mã bản quyền để tiếp tục
+            </p>
           </div>
           
-          <h1 className="text-3xl font-black tracking-tight mb-2 text-stone-700 drop-shadow-sm">
-            Kích Hoạt <span className="text-tet-red">V-Manga</span>
-          </h1>
-          <p className="text-stone-400 mb-8 text-sm font-bold">
-            Vui lòng nhập mã bản quyền để mở khóa toàn bộ tính năng!
-          </p>
-          
-          <div className="mb-6 bg-stone-50 p-5 rounded-3xl border-2 border-stone-100 group hover:border-tet-red transition-colors">
-            <label className="block text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2">
-              Mã Máy Tính (Cần gửi cho AD)
-            </label>
-            <div className="relative flex items-center">
+          {/* Machine ID Section */}
+          <div className="mb-8 relative group">
+            <div className="absolute -top-3 left-4 bg-white px-2 text-xs font-black border-2 border-black z-10 uppercase tracking-wider">
+              1. Mã Máy Của Bạn
+            </div>
+            <div className="flex border-4 border-black bg-gray-50 h-14 relative shadow-[4px_4px_0px_rgba(0,0,0,0.1)]">
+              <div className="flex items-center justify-center w-12 border-r-4 border-black bg-white">
+                <LockIcon className="w-6 h-6" />
+              </div>
               <input
                 ref={machineIdInputRef}
                 type="text"
                 readOnly
                 value={machineId || 'Đang lấy mã...'}
-                className="w-full bg-transparent border-none text-stone-700 font-mono text-center text-base focus:ring-0 tracking-wider font-black pr-10"
+                className="flex-1 bg-transparent border-none text-center font-mono font-bold text-lg focus:ring-0 uppercase text-gray-700"
               />
               <button
                 onClick={handleCopy}
-                className="absolute right-0 p-2 text-stone-300 hover:text-tet-red transition-all"
-                title="Sao chép mã máy"
+                className={`w-14 flex items-center justify-center border-l-4 border-black transition-all hover:bg-black hover:text-white ${copied ? 'bg-black text-white' : 'bg-manga-accent text-white'}`}
+                title="Sao chép"
               >
-                {copied ? <CheckIcon className="w-5 h-5 text-tet-green" /> : <CopyIcon className="w-5 h-5" />}
+                {copied ? <CheckIcon className="w-6 h-6" /> : <CopyIcon className="w-6 h-6" />}
               </button>
             </div>
+            <p className="text-[10px] font-bold text-gray-500 mt-2 text-center uppercase">
+              * Gửi mã này cho quản trị viên để nhận Key
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="text-left">
-              <label htmlFor="licenseKey" className="block text-xs font-black text-stone-400 mb-2 uppercase tracking-wide ml-2">
-                Mã Kích Hoạt Của Bạn
-              </label>
-              <textarea
-                id="licenseKey"
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="relative">
+               <div className="absolute -top-3 left-4 bg-white px-2 text-xs font-black border-2 border-black z-10 uppercase tracking-wider">
+                  2. Nhập Key Kích Hoạt
+               </div>
+               <textarea
                 value={key}
                 onChange={(e) => setKey(e.target.value)}
-                rows={2}
-                className="w-full bg-white border-2 border-stone-100 rounded-3xl p-5 text-stone-700 placeholder-stone-300 focus:ring-0 focus:border-tet-red transition text-center font-mono text-sm shadow-inner font-bold resize-none"
+                rows={3}
+                className="w-full bg-white border-4 border-black p-4 font-mono text-sm font-bold text-black focus:ring-0 focus:shadow-[4px_4px_0px_#000] focus:-translate-y-1 focus:-translate-x-1 transition-all resize-none placeholder-gray-300"
                 placeholder="Dán mã kích hoạt tại đây..."
                 required
               />
             </div>
             
+            {error && (
+              <div className="bg-red-100 border-2 border-black p-3 text-red-600 font-bold text-xs uppercase text-center animate-bounce">
+                ⚠️ {error}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={isActivating || !machineId}
-              className="w-full bg-gradient-to-r from-tet-red to-tet-red-dark text-white font-black py-4 px-8 rounded-2xl hover:shadow-lg transition-all transform hover:scale-[1.02] shadow-red-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center border-4 border-white uppercase tracking-widest text-sm"
+              className="w-full bg-black text-white font-display text-2xl py-4 border-4 border-black shadow-[6px_6px_0px_#999] hover:shadow-[8px_8px_0px_#000] hover:-translate-y-1 hover:-translate-x-1 active:translate-x-0 active:translate-y-0 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase flex items-center justify-center gap-3 group"
             >
-              {isActivating ? <LoaderIcon /> : '🧧 KÍCH HOẠT NGAY'}
+              {isActivating ? <LoaderIcon /> : (
+                <>
+                  <span>Mở Khóa Ngay</span>
+                  <KeyIcon className="w-6 h-6 group-hover:rotate-45 transition-transform" />
+                </>
+              )}
             </button>
-            
-            {error && (
-              <div className="text-red-500 font-bold bg-red-50 border border-red-100 p-3 rounded-xl text-xs animate-pulse">
-                {error}
-              </div>
-            )}
           </form>
 
-          <div className="mt-8 pt-6 border-t border-stone-100">
-             <p className="text-[10px] text-stone-300 font-bold uppercase tracking-widest">© 2026 V-Manga</p>
+          <div className="mt-8 pt-6 border-t-4 border-black border-dashed text-center">
+             <p className="text-xs font-black uppercase tracking-widest text-gray-400">
+                © 2026 V-Manga Enterprise
+             </p>
           </div>
         </div>
       </div>
