@@ -1,6 +1,6 @@
 {
   "name": "v-manga",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "Ứng dụng tự động hóa quy trình sản xuất truyện tranh và hình ảnh minh họa bằng AI.",
   "main": "main.js",
   "homepage": "./",

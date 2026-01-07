@@ -333,7 +333,8 @@ const App: React.FC = () => {
             </header>
 
             <div className="flex-1 p-6 overflow-hidden bg-white relative">
-                <div className="absolute top-0 left-0 w-full h-full opacity-5 bg-[url('https://www.transparenttextures.com/patterns/dot-noise.png')] pointer-events-none"></div>
+                {/* Fix: Use CSS gradient instead of external URL to prevent 404 error */}
+                <div className="absolute top-0 left-0 w-full h-full opacity-5 bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:4px_4px] pointer-events-none"></div>
                 
                 <div className="max-w-[1600px] mx-auto h-full overflow-y-auto custom-scrollbar relative z-10">
                     {activeTab === 'generator' ? (
