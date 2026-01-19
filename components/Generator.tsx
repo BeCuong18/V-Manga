@@ -214,7 +214,6 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
                 let fullPath = '';
                 if (outputFolderPath) {
                     const sep = navigator.userAgent.includes("Windows") ? '\\' : '/';
-                    const suffix = mode === 'video' ? '_Video' : ''; // Optional: Add suffix to file name? No, keeping user filename
                     fullPath = `${outputFolderPath}${sep}${fileName}`;
                 } else {
                     fullPath = fileName; 
