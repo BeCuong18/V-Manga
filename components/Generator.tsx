@@ -11,25 +11,17 @@ interface MangaProcessorProps {
 export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComplete, onFeedback }) => {
     const [charFolderPath, setCharFolderPath] = useState('');
     const [inputExcelPath, setInputExcelPath] = useState('');
-    
-    // New states for Output configuration
     const [outputFileName, setOutputFileName] = useState('Manga_Output');
     const [outputFolderPath, setOutputFolderPath] = useState('');
-
-    // Desktop: Stores full paths. Web: Stores File objects for preview/processing if needed.
     const [charFiles, setCharFiles] = useState<{name: string, fullPath: string}[]>([]); 
-    
     const [isProcessing, setIsProcessing] = useState(false);
     const [previewData, setPreviewData] = useState<any[]>([]);
     
-    // Refs for Web inputs
     const folderInputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const isDesktop = isElectron();
     const ipcRenderer = getIpcRenderer();
-
-    // --- HANDLERS ---
 
     const handleSelectFolder = async () => {
         if (isDesktop && ipcRenderer) {
@@ -43,19 +35,14 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
                 }
             }
         } else {
-            // Web Mode
-            if (folderInputRef.current) {
-                folderInputRef.current.click();
-            }
+            if (folderInputRef.current) folderInputRef.current.click();
         }
     };
 
     const handleSelectOutputFolder = async () => {
         if (isDesktop && ipcRenderer) {
             const res = await ipcRenderer.invoke('open-folder-dialog');
-            if (res.success) {
-                setOutputFolderPath(res.path);
-            }
+            if (res.success) setOutputFolderPath(res.path);
         }
     };
 
@@ -69,10 +56,7 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
     const handleWebFolderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (files && files.length > 0) {
-            const fileList = Array.from(files).map((f: File) => ({
-                name: f.name,
-                fullPath: f.name 
-            }));
+            const fileList = Array.from(files).map((f: File) => ({ name: f.name, fullPath: f.name }));
             setCharFiles(fileList);
             setCharFolderPath(`Upload: ${files.length} files`);
             onFeedback({ type: 'success', message: `Đã tải ${files.length} ảnh từ trình duyệt.` });
@@ -85,19 +69,16 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
             if (res.success && res.files.length > 0) {
                 const file = res.files[0];
                 setInputExcelPath(file.path);
-                // Auto set default output folder to same as input if not set
                 if (!outputFolderPath) {
                     const sep = navigator.userAgent.includes("Windows") ? '\\' : '/';
                     const pathParts = file.path.split(sep);
-                    pathParts.pop(); // remove filename
+                    pathParts.pop();
                     setOutputFolderPath(pathParts.join(sep));
                 }
                 readExcelBuffer(file.content);
             }
         } else {
-            if (fileInputRef.current) {
-                fileInputRef.current.click();
-            }
+            if (fileInputRef.current) fileInputRef.current.click();
         }
     };
 
@@ -134,79 +115,95 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
 
         setIsProcessing(true);
         try {
-            // Lấy tên base để đặt tên file output (bỏ đuôi .xlsx nếu người dùng lỡ nhập)
             const baseOutputName = outputFileName.replace(/\.xlsx$/i, '');
-
-            const jobs = previewData.map((row: any, index: number) => {
-                const charsStr = row['Characters'] || '';
-                const description = row['Description'] || '';
-                const stt = row['stt'] || (index + 1);
-                
-                let hasRefImages = false;
-
-                const job: any = {
-                    JOB_ID: `Job_${stt}`,
-                    PROMPT: description,
-                    IMAGE_PATH: '',
-                    IMAGE_PATH_2: '',
-                    IMAGE_PATH_3: '',
-                    IMAGE_PATH_4: '',
-                    IMAGE_PATH_5: '',
-                    IMAGE_PATH_6: '',
-                    IMAGE_PATH_7: '',
-                    IMAGE_PATH_8: '',
-                    IMAGE_PATH_9: '',
-                    IMAGE_PATH_10: '',
-                    STATUS: '', // Empty status as requested
-                    VIDEO_NAME: `${baseOutputName}_${stt}`, 
-                    TYPE_VIDEO: 'IMG' // Default, will change below
-                };
-
-                if (charsStr && typeof charsStr === 'string' && charsStr.trim() !== '') {
-                    const charNames = charsStr.split(/[,;]/).map(c => c.trim()).filter(c => c);
-                    charNames.forEach((charName, i) => {
-                        if (i >= 10) return; 
-                        const found = charFiles.find(f => {
-                             const fname = f.name.toLowerCase();
-                             const cname = charName.toLowerCase();
-                             return fname.startsWith(cname + '.') || fname === cname;
-                        });
-
-                        if (found) {
-                            hasRefImages = true;
-                            const key = i === 0 ? 'IMAGE_PATH' : `IMAGE_PATH_${i + 1}`;
-                            job[key] = found.fullPath;
-                        }
-                    });
-                }
-
-                // Logic Type Video
-                if (mode === 'image') {
-                    job.TYPE_VIDEO = 'IMG';
-                } else {
-                    // Mode Video
-                    if (hasRefImages) {
-                        job.TYPE_VIDEO = 'IN2V';
-                    } else {
-                        job.TYPE_VIDEO = ''; // "không ghi gì" với các job không có ảnh
-                    }
-                }
-
-                return job;
-            });
-
-            const headerOrder = [
+            
+            // Định nghĩa Header cho AoA với các cột đánh số IMAGE_PATH, IMAGE_PATH_2...
+            const excelHeader = [
                 "JOB_ID", "PROMPT", 
                 "IMAGE_PATH", "IMAGE_PATH_2", "IMAGE_PATH_3", "IMAGE_PATH_4", "IMAGE_PATH_5",
                 "IMAGE_PATH_6", "IMAGE_PATH_7", "IMAGE_PATH_8", "IMAGE_PATH_9", "IMAGE_PATH_10",
                 "STATUS", "VIDEO_NAME", "TYPE_VIDEO"
             ];
 
-            const ws = XLSX.utils.json_to_sheet(jobs, { header: headerOrder });
+            const excelRows: any[][] = [excelHeader];
+            const internalJobs: any[] = [];
+
+            previewData.forEach((row: any, index: number) => {
+                const charsStr = row['Characters'] || '';
+                const description = row['Description'] || '';
+                const stt = row['stt'] || (index + 1);
+                
+                let hasRefImages = false;
+                let foundImagesCount = 0;
+                const foundPaths: string[] = Array(10).fill('');
+
+                if (charsStr && typeof charsStr === 'string' && charsStr.trim() !== '') {
+                    // Tách nhân vật và lọc trùng
+                    const charNames = Array.from(new Set(charsStr.split(/[,;]/).map(c => c.trim()).filter(c => c)));
+                    
+                    for (const charName of charNames) {
+                        if (foundImagesCount >= 10) break;
+
+                        const found = charFiles.find(f => {
+                            const fname = f.name.toLowerCase();
+                            const cname = charName.toLowerCase();
+                            return fname.startsWith(cname + '.') || fname === cname;
+                        });
+
+                        if (found) {
+                            // Điền tuần tự: Nếu tìm thấy ảnh, điền vào vị trí trống tiếp theo trong mảng 10 phần tử
+                            foundPaths[foundImagesCount] = found.fullPath;
+                            foundImagesCount++;
+                            hasRefImages = true;
+                        }
+                    }
+                }
+
+                let typeVideo = 'IMG';
+                if (mode === 'image') {
+                    typeVideo = 'IMG';
+                } else {
+                    typeVideo = hasRefImages ? 'IN2V' : '';
+                }
+
+                const jobId = `Job_${stt}`;
+                const videoName = `${baseOutputName}_${stt}`;
+
+                // Hàng dữ liệu cho Excel (Khớp với Header 15 cột)
+                const excelRow = [
+                    jobId,
+                    description,
+                    ...foundPaths,
+                    '', // STATUS cột 12 (index 12)
+                    videoName,
+                    typeVideo
+                ];
+                excelRows.push(excelRow);
+
+                // Lưu job nội bộ cho App
+                internalJobs.push({
+                    id: jobId,
+                    prompt: description,
+                    status: '',
+                    videoName: videoName,
+                    typeVideo: typeVideo,
+                    imagePath: foundPaths[0],
+                    imagePath2: foundPaths[1],
+                    imagePath3: foundPaths[2],
+                    imagePath4: foundPaths[3],
+                    imagePath5: foundPaths[4],
+                    imagePath6: foundPaths[5],
+                    imagePath7: foundPaths[6],
+                    imagePath8: foundPaths[7],
+                    imagePath9: foundPaths[8],
+                    imagePath10: foundPaths[9],
+                });
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(excelRows);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "MangaJobs");
             
-            // Output handling
             if (isDesktop && ipcRenderer) {
                 const outBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
                 const fileName = outputFileName.endsWith('.xlsx') ? outputFileName : `${outputFileName}.xlsx`;
@@ -223,26 +220,22 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
                      const saveRes = await ipcRenderer.invoke('save-file-custom', { path: fullPath, content: outBuffer });
                      if (saveRes.success) {
                         onFeedback({ type: 'success', message: 'Đã lưu file thành công!' });
-                        completeProcess(fullPath, jobs);
+                        onProcessingComplete(fullPath, internalJobs);
                      } else {
                         onFeedback({ type: 'error', message: 'Lỗi khi lưu file: ' + saveRes.error });
                      }
                 } else {
-                    const saveRes = await ipcRenderer.invoke('save-file-dialog', { 
-                        defaultPath: fileName, 
-                        fileContent: outBuffer 
-                    });
+                    const saveRes = await ipcRenderer.invoke('save-file-dialog', { defaultPath: fileName, fileContent: outBuffer });
                     if (saveRes.success) {
                         onFeedback({ type: 'success', message: 'Đã lưu file thành công!' });
-                        completeProcess(saveRes.filePath, jobs);
+                        onProcessingComplete(saveRes.filePath, internalJobs);
                     }
                 }
             } else {
                 XLSX.writeFile(wb, `${outputFileName}.xlsx`);
                 onFeedback({ type: 'success', message: 'Đã tải xuống file Excel!' });
-                completeProcess(`${outputFileName}.xlsx`, jobs);
+                onProcessingComplete(`${outputFileName}.xlsx`, internalJobs);
             }
-
         } catch (e: any) {
             onFeedback({ type: 'error', message: `Lỗi xử lý: ${e.message}` });
         } finally {
@@ -250,33 +243,9 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
         }
     };
 
-    const completeProcess = (path: string, jobs: any[]) => {
-         const internalJobs = jobs.map((j: any) => ({
-            id: j.JOB_ID,
-            prompt: j.PROMPT,
-            status: '', // Empty initially
-            videoName: j.VIDEO_NAME,
-            typeVideo: j.TYPE_VIDEO, // Use generated type
-            imagePath: j.IMAGE_PATH || '',
-            imagePath2: j.IMAGE_PATH_2 || '',
-            imagePath3: j.IMAGE_PATH_3 || '',
-            imagePath4: j.IMAGE_PATH_4 || '',
-            imagePath5: j.IMAGE_PATH_5 || '',
-            imagePath6: j.IMAGE_PATH_6 || '',
-            imagePath7: j.IMAGE_PATH_7 || '',
-            imagePath8: j.IMAGE_PATH_8 || '',
-            imagePath9: j.IMAGE_PATH_9 || '',
-            imagePath10: j.IMAGE_PATH_10 || '',
-        }));
-        onProcessingComplete(path, internalJobs);
-    };
-
     return (
         <div className="max-w-4xl mx-auto space-y-8 p-4">
-            <input type="file" ref={folderInputRef} style={{display: 'none'}} 
-                // @ts-ignore
-                webkitdirectory="" directory="" multiple onChange={handleWebFolderChange} 
-            />
+            <input type="file" ref={folderInputRef} style={{display: 'none'}} webkitdirectory="" directory="" multiple onChange={handleWebFolderChange} />
             <input type="file" ref={fileInputRef} style={{display: 'none'}} accept=".xlsx, .xls" onChange={handleWebExcelChange} />
 
             <div className="manga-panel p-8 bg-white relative">
@@ -285,7 +254,6 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
                  </div>
                  
                  <div className="space-y-6 mt-4">
-                    {/* Character Folder */}
                     <div className="flex flex-col gap-2">
                         <label className="font-bold uppercase tracking-wider text-sm">1. Thư mục ảnh nhân vật</label>
                         <div className="flex gap-4">
@@ -296,14 +264,8 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
                                 <FolderIcon className="w-5 h-5"/> Chọn Folder
                             </button>
                         </div>
-                        {charFiles.length > 0 && (
-                            <div className="text-xs text-green-600 font-bold flex items-center gap-1">
-                                <CheckIcon className="w-4 h-4"/> Tìm thấy {charFiles.length} file ảnh.
-                            </div>
-                        )}
                     </div>
 
-                    {/* Excel Input */}
                     <div className="flex flex-col gap-2">
                         <label className="font-bold uppercase tracking-wider text-sm">2. File Excel Kịch bản</label>
                         <div className="flex gap-4">
@@ -316,90 +278,29 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
                         </div>
                     </div>
 
-                    {/* Output Configuration */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t-2 border-dashed border-gray-300">
                         <div className="flex flex-col gap-2">
                             <label className="font-bold uppercase tracking-wider text-sm">3. Tên File Kết Quả</label>
-                            <input 
-                                type="text" 
-                                value={outputFileName}
-                                onChange={(e) => setOutputFileName(e.target.value)}
-                                className="border-2 border-black p-3 font-bold"
-                                placeholder="VD: Manga_Tap1"
-                            />
-                            <span className="text-[10px] text-gray-500 italic">* File sẽ đặt tên: {outputFileName.replace(/\.xlsx$/i, '')}_{1}.png/mp4...</span>
+                            <input type="text" value={outputFileName} onChange={(e) => setOutputFileName(e.target.value)} className="border-2 border-black p-3 font-bold" />
                         </div>
                         <div className="flex flex-col gap-2">
                             <label className="font-bold uppercase tracking-wider text-sm">4. Thư mục lưu kết quả</label>
                             <div className="flex gap-2">
-                                <div className="flex-1 border-2 border-black p-3 bg-gray-50 font-mono text-xs truncate" title={outputFolderPath}>
-                                    {outputFolderPath || 'Mặc định (theo file input)'}
-                                </div>
-                                <button onClick={handleSelectOutputFolder} className="bg-white border-2 border-black px-3 hover:bg-black hover:text-white transition" title="Chọn thư mục lưu">
-                                    <FolderIcon className="w-4 h-4"/>
-                                </button>
-                                <button onClick={handleCopyOutputFolder} className="bg-white border-2 border-black px-3 hover:bg-manga-accent hover:text-white transition" title="Sao chép đường dẫn">
-                                    <CopyIcon className="w-4 h-4"/>
-                                </button>
+                                <div className="flex-1 border-2 border-black p-3 bg-gray-50 font-mono text-xs truncate">{outputFolderPath || 'Mặc định'}</div>
+                                <button onClick={handleSelectOutputFolder} className="bg-white border-2 border-black px-3 hover:bg-black hover:text-white transition"><FolderIcon className="w-4 h-4"/></button>
                             </div>
                         </div>
                     </div>
-
-                    {/* Preview */}
-                    {previewData.length > 0 && (
-                        <div className="mt-4 border-2 border-dashed border-gray-400 p-4 bg-gray-50 max-h-40 overflow-y-auto custom-scrollbar">
-                            <p className="text-xs font-bold text-gray-400 mb-2">XEM TRƯỚC DỮ LIỆU:</p>
-                            <table className="w-full text-xs text-left">
-                                <thead>
-                                    <tr className="border-b border-gray-300">
-                                        <th className="py-2">STT</th>
-                                        <th className="py-2">Characters</th>
-                                        <th className="py-2">Description</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {previewData.slice(0, 5).map((row, i) => (
-                                        <tr key={i} className="border-b border-gray-100">
-                                            <td className="py-1">{row.stt || i+1}</td>
-                                            <td className="py-1 font-bold">{row.Characters}</td>
-                                            <td className="py-1 text-gray-600 truncate max-w-xs">{row.Description}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
                  </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex flex-col md:flex-row justify-center gap-6">
-                 {/* Button Create Image */}
-                 <button 
-                    onClick={() => processFile('image')}
-                    disabled={isProcessing || !charFiles.length || !previewData.length}
-                    className="flex-1 bg-white text-black font-comic text-xl px-8 py-4 border-4 border-black shadow-comic hover:shadow-comic-hover hover:bg-manga-gray transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                 >
-                    {isProcessing ? <LoaderIcon /> : (
-                        <>
-                            <UploadIcon className="w-6 h-6"/>
-                            <span>TẠO ẢNH (IMG)</span>
-                        </>
-                    )}
+                 <button onClick={() => processFile('image')} disabled={isProcessing} className="flex-1 bg-white text-black font-comic text-xl px-8 py-4 border-4 border-black shadow-comic hover:bg-manga-gray transition-all flex items-center justify-center gap-3">
+                    {isProcessing ? <LoaderIcon /> : <><UploadIcon className="w-6 h-6"/><span>TẠO ẢNH (IMG)</span></>}
                  </button>
 
-                 {/* Button Create Video */}
-                 <button 
-                    onClick={() => processFile('video')}
-                    disabled={isProcessing || !charFiles.length || !previewData.length}
-                    className="flex-1 bg-manga-accent text-white font-comic text-xl px-8 py-4 border-4 border-black shadow-comic hover:shadow-comic-hover hover:translate-x-1 hover:translate-y-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                 >
-                    {isProcessing ? <LoaderIcon /> : (
-                        <>
-                            <VideoIcon className="w-6 h-6"/>
-                            <span>TẠO VIDEO</span>
-                        </>
-                    )}
+                 <button onClick={() => processFile('video')} disabled={isProcessing} className="flex-1 bg-manga-accent text-white font-comic text-xl px-8 py-4 border-4 border-black shadow-comic transition-all flex items-center justify-center gap-3">
+                    {isProcessing ? <LoaderIcon /> : <><VideoIcon className="w-6 h-6"/><span>TẠO VIDEO</span></>}
                  </button>
             </div>
         </div>
