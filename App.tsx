@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { VideoJob, ActiveTab, TrackedFile } from './types';
 import { MangaProcessor } from './components/Generator';
 import { Tracker } from './components/Tracker';
+import { getIpcRenderer } from './utils/platform';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('generator');
   const [trackedFiles, setTrackedFiles] = useState<TrackedFile[]>([]);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
+
+  const ipcRenderer = getIpcRenderer();
 
   const handleProcessingComplete = (path: string, jobs: VideoJob[]) => {
     const fileName = path.split(/[\\/]/).pop() || 'Project';
@@ -16,6 +19,25 @@ const App: React.FC = () => {
     setActiveTab('tracker');
   };
 
+  const handleShowFolder = async (filePath: string) => {
+    if (ipcRenderer) {
+      await ipcRenderer.invoke('show-item-in-folder', filePath);
+    } else {
+      console.log("Show Folder (Web Mock):", filePath);
+    }
+  };
+
+  const handleReload = async () => {
+    if (ipcRenderer && trackedFiles[activeFileIndex]?.path) {
+      const currentPath = trackedFiles[activeFileIndex].path;
+      // In a real implementation, you would trigger a directory scan or re-parse the excel
+      // For now, let's signal the UI to refresh local file URLs (handled by timestamps in Tracker)
+      console.log("Reloading data for:", currentPath);
+      // We can trigger a re-render or a specific IPC call if needed
+      setTrackedFiles(prev => [...prev]); // Force state refresh
+    }
+  };
+
   return (
     <div className="min-h-screen bg-tet-cream font-comic flex flex-col">
       <header className="bg-white border-b-4 border-black p-4 flex flex-col md:flex-row justify-between items-center shadow-md gap-4 relative overflow-hidden">
@@ -23,14 +45,12 @@ const App: React.FC = () => {
         <div className="absolute top-0 right-0 w-32 h-full opacity-5 pointer-events-none bg-[repeating-linear-gradient(45deg,#000,#000_10px,#fff_10px,#fff_20px)]"></div>
         
         <div className="flex items-center gap-4 relative z-10">
-          {/* LOGO IMAGE: Bạn chỉ cần thay path assets/logo.png bằng ảnh của bạn */}
           <div className="w-12 h-12 border-4 border-black bg-manga-accent shadow-comic transform -rotate-3 overflow-hidden flex-shrink-0">
              <img 
                src="assets/icon.png" 
                alt="V-Manga Logo" 
                className="w-full h-full object-cover"
                onError={(e) => {
-                 // Fallback nếu không tìm thấy file ảnh
                  e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM8.5 15l-1.5-2L5 17h14l-3.5-4.5-2.5 3z'/%3E%3C/svg%3E";
                }}
              />
@@ -79,11 +99,16 @@ const App: React.FC = () => {
                 stats={{}}
                 ffmpegFound={true}
                 isCombining={false}
-                onPlayVideo={(path) => console.log("Play", path)}
-                onShowFolder={(path) => console.log("Show Folder", path)}
-                onOpenToolFlows={() => {}}
+                onPlayVideo={(path) => {
+                  if(ipcRenderer) ipcRenderer.invoke('open-path', path);
+                  else console.log("Play Mock", path);
+                }}
+                onShowFolder={handleShowFolder}
+                onOpenToolFlows={() => {
+                   if(ipcRenderer) ipcRenderer.invoke('run-tool');
+                }}
                 onSetToolFlowPath={() => {}}
-                onReloadVideos={() => {}}
+                onReloadVideos={handleReload}
                 onRetryStuck={() => {}}
                 onRetryJob={() => {}}
                 onDeleteVideo={() => {}}
@@ -95,7 +120,6 @@ const App: React.FC = () => {
         )}
       </main>
       
-      {/* Footer Branding */}
       <footer className="bg-black text-white text-[10px] py-1 px-4 flex justify-between uppercase font-bold tracking-widest">
         <span>V-MANGA ENTERPRISE © 2026</span>
         <span className="text-manga-accent">Industrial Production Workflow</span>

@@ -1,7 +1,6 @@
-
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { UploadIcon, FolderIcon, CheckIcon, LoaderIcon, CopyIcon, VideoIcon } from './Icons';
+import { UploadIcon, FolderIcon, LoaderIcon, VideoIcon } from './Icons';
 import { isElectron, getIpcRenderer } from '../utils/platform';
 
 interface MangaProcessorProps {
