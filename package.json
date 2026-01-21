@@ -10,7 +10,8 @@
     "build": "npx tsc && vite build",
     "preview": "vite preview",
     "start": "npm run build && electron .",
-    "dist": "npm run build && electron-builder --publish always"
+    "dist": "npm run build && electron-builder --publish always",
+    "make-icon": "npx png2icons assets/icon.png assets/icon -i"
   },
   "author": "V-Manga Team",
   "license": "UNLICENSED",
@@ -35,12 +36,16 @@
     "electron": "^29.1.0",
     "electron-builder": "^24.13.3",
     "typescript": "^5.3.3",
-    "vite": "^5.0.12"
+    "vite": "^5.0.12",
+    "png2icons": "^2.0.1"
   },
   "build": {
     "appId": "com.vmanga.app",
     "productName": "V-Manga",
-    "icon": "assets/icon.ico",
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
     "publish": [
       {
         "provider": "github",
@@ -60,12 +65,25 @@
         "to": "ffmpeg"
       }
     ],
-    "directories": {
-      "output": "release"
-    },
     "win": {
-      "target": "nsis",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico",
+      "createDesktopShortcut": true,
+      "shortcutName": "V-Manga"
     },
     "mac": {
       "target": "dmg",
