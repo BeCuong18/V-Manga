@@ -193,17 +193,14 @@ function setupAutoUpdater() {
  * Hàm hỗ trợ lấy đường dẫn Icon chuẩn xác
  */
 function getIconPath() {
-    // Windows ưu tiên .ico, Linux/Taskbar ưu tiên .png
-    const ext = process.platform === 'win32' ? 'ico' : 'png';
-    const iconName = `icon.${ext}`;
+    const isWin = process.platform === 'win32';
+    const ext = isWin ? 'ico' : 'png';
+    const assetsPath = path.join(__dirname, 'assets');
+    let iconPath = path.join(assetsPath, `icon.${ext}`);
     
-    // Khi app đã đóng gói, icon nằm trong thư mục resources hoặc cùng cấp main.js tùy cấu hình build
-    // Thông thường build-electron sẽ đưa thư mục assets vào root của gói ứng dụng
-    let iconPath = path.join(__dirname, 'assets', iconName);
-    
+    // Nếu không thấy file .ico, thử tìm .png (thường dùng cho Taskbar/Linux)
     if (!fs.existsSync(iconPath)) {
-        // Dự phòng nếu không tìm thấy file theo extension cụ thể
-        iconPath = path.join(__dirname, 'assets', 'icon.png');
+        iconPath = path.join(assetsPath, 'icon.png');
     }
     
     return iconPath;
@@ -213,7 +210,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400, height: 900,
     webPreferences: { contextIsolation: false, nodeIntegration: true },
-    icon: getIconPath(), // QUAN TRỌNG: Thiết lập icon cho cửa sổ và thanh taskbar
+    icon: getIconPath(), 
     backgroundColor: '#ffffff'
   });
   
