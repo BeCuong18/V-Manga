@@ -1,21 +1,27 @@
 
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
+import { GoogleGenAI } from '@google/genai';
 import { UploadIcon, FolderIcon, LoaderIcon, VideoIcon } from './Icons';
 import { isElectron, getIpcRenderer } from '../utils/platform';
+import { storySystemPrompt } from '../constants';
+import { Scene } from '../types';
 
 interface MangaProcessorProps {
     onProcessingComplete: (outputFilePath: string, jobs: any[]) => void;
     onFeedback: (feedback: { type: 'error' | 'success' | 'info', message: string } | null) => void;
+    activeApiKey?: string;
+    onScenesGenerated?: (scenes: Scene[]) => void;
 }
 
-export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComplete, onFeedback }) => {
+export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComplete, onFeedback, activeApiKey, onScenesGenerated }) => {
     const [charFolderPath, setCharFolderPath] = useState('');
     const [inputExcelPath, setInputExcelPath] = useState('');
     const [outputFileName, setOutputFileName] = useState('Manga_Output');
     const [outputFolderPath, setOutputFolderPath] = useState('');
     const [charFiles, setCharFiles] = useState<{name: string, fullPath: string}[]>([]); 
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isAiGenerating, setIsAiGenerating] = useState(false);
     const [previewData, setPreviewData] = useState<any[]>([]);
     
     const folderInputRef = useRef<HTMLInputElement>(null);
@@ -101,6 +107,62 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
         }
     };
 
+    const handleAiGenerate = async () => {
+        if (!activeApiKey) {
+            onFeedback({ type: 'error', message: 'Vui lòng cài đặt API Key trong phần Settings (icon chìa khóa).' });
+            return;
+        }
+        if (previewData.length === 0) {
+            onFeedback({ type: 'error', message: 'Vui lòng nhập file Excel kịch bản trước.' });
+            return;
+        }
+
+        setIsAiGenerating(true);
+        try {
+            const ai = new GoogleGenAI({ apiKey: activeApiKey });
+            
+            // Prepare a chunk of data for the AI to understand the full context
+            const contextText = previewData.map((row, i) => 
+                `Scene ${row.stt || i+1}: Characters: ${row.Characters || 'Unknown'}, Description: ${row.Description || 'None'}`
+            ).join('\n');
+
+            const prompt = `Based on the following sequence of scenes, generate highly detailed prompts for each.
+            ${contextText}`;
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-3-pro-preview',
+                contents: prompt,
+                config: {
+                    systemInstruction: storySystemPrompt,
+                    responseMimeType: "application/json"
+                }
+            });
+
+            const resultText = response.text || '{}';
+            const parsed = JSON.parse(resultText);
+            
+            if (parsed.prompts && Array.isArray(parsed.prompts)) {
+                onFeedback({ type: 'success', message: `Đã sinh ${parsed.prompts.length} kịch bản AI chi tiết.` });
+                if (onScenesGenerated) onScenesGenerated(parsed.prompts);
+                
+                // Update previewData with the new prompts if desired
+                const updatedData = previewData.map((row, i) => {
+                    const aiMatch = parsed.prompts.find((p: any) => p.scene_number === (row.stt || i + 1));
+                    return {
+                        ...row,
+                        Description: aiMatch ? aiMatch.prompt_text : row.Description
+                    };
+                });
+                setPreviewData(updatedData);
+            }
+
+        } catch (error: any) {
+            onFeedback({ type: 'error', message: `Lỗi AI: ${error.message}` });
+        } finally {
+            setIsAiGenerating(false);
+        }
+    };
+
     const processFile = async (mode: 'image' | 'video') => {
         if (!charFiles.length || !previewData.length) {
             onFeedback({ type: 'error', message: 'Vui lòng chọn đủ thư mục ảnh và file Excel đầu vào.' });
@@ -126,7 +188,6 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
                 const description = row['Description'] || '';
                 const stt = row['stt'] || (index + 1);
                 
-                let hasRefImages = false;
                 let foundImagesCount = 0;
                 const foundPaths: string[] = Array(10).fill('');
 
@@ -145,18 +206,12 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
                         if (found) {
                             foundPaths[foundImagesCount] = found.fullPath;
                             foundImagesCount++;
-                            hasRefImages = true;
                         }
                     }
                 }
 
-                let typeVideo = 'IMG';
-                if (mode === 'image') {
-                    typeVideo = 'IMG';
-                } else {
-                    typeVideo = hasRefImages ? 'IN2V' : '';
-                }
-
+                let typeVideo = mode === 'image' ? 'IMG' : (foundPaths[0] ? 'IN2V' : 'STORY');
+                
                 const jobId = `Job_${stt}`;
                 const videoName = `${baseOutputName}_${stt}`;
 
@@ -238,7 +293,7 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
             <input type="file" ref={fileInputRef} style={{display: 'none'}} accept=".xlsx, .xls" onChange={handleWebExcelChange} />
 
             <div className="manga-panel p-8 bg-white relative">
-                 <div className="absolute -top-4 -left-4 bg-manga-accent text-white px-4 py-1 font-comic border-2 border-black shadow-comic text-xl transform -rotate-2">
+                 <div className="absolute -top-4 -left-4 bg-manga-accent text-white px-4 py-1 font-comic border-2 border-black shadow-comic text-xl transform -rotate-2 z-20">
                     BƯỚC 1: NHẬP DỮ LIỆU ĐẦU VÀO
                  </div>
                  
@@ -267,6 +322,19 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
                         </div>
                     </div>
 
+                    <div className="flex flex-col gap-2 pt-4 border-t-2 border-dashed border-gray-200">
+                        <button 
+                            onClick={handleAiGenerate} 
+                            disabled={isAiGenerating || previewData.length === 0}
+                            className={`w-full py-4 border-4 border-black font-black uppercase tracking-widest text-lg flex items-center justify-center gap-3 transition-all ${isAiGenerating ? 'bg-gray-200' : 'bg-tet-gold hover:bg-yellow-400 shadow-comic hover:shadow-none hover:translate-x-1 hover:translate-y-1'}`}
+                        >
+                            {isAiGenerating ? <LoaderIcon /> : <><span>🪄 TỰ ĐỘNG VIẾT PROMPT (GEMINI AI)</span></>}
+                        </button>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase text-center">
+                            * Sử dụng AI để nâng cấp các mô tả ngắn thành prompt chuyên nghiệp cho AI Video/Image
+                        </p>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t-2 border-dashed border-gray-300">
                         <div className="flex flex-col gap-2">
                             <label className="font-bold uppercase tracking-wider text-sm">3. Tên File Kết Quả</label>
@@ -286,11 +354,11 @@ export const MangaProcessor: React.FC<MangaProcessorProps> = ({ onProcessingComp
 
             <div className="flex flex-col md:flex-row justify-center gap-6">
                  <button onClick={() => processFile('image')} disabled={isProcessing} className="flex-1 bg-white text-black font-comic text-xl px-8 py-4 border-4 border-black shadow-comic hover:bg-manga-gray transition-all flex items-center justify-center gap-3">
-                    {isProcessing ? <LoaderIcon /> : <><UploadIcon className="w-6 h-6"/><span>TẠO ẢNH (IMG)</span></>}
+                    {isProcessing ? <LoaderIcon /> : <><UploadIcon className="w-6 h-6"/><span>XUẤT JOB ẢNH (IMG)</span></>}
                  </button>
 
                  <button onClick={() => processFile('video')} disabled={isProcessing} className="flex-1 bg-manga-accent text-white font-comic text-xl px-8 py-4 border-4 border-black shadow-comic transition-all flex items-center justify-center gap-3">
-                    {isProcessing ? <LoaderIcon /> : <><VideoIcon className="w-6 h-6"/><span>TẠO VIDEO</span></>}
+                    {isProcessing ? <LoaderIcon /> : <><VideoIcon className="w-6 h-6"/><span>XUẤT JOB VIDEO</span></>}
                  </button>
             </div>
         </div>

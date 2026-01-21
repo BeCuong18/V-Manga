@@ -1,7 +1,7 @@
 
 export type MvGenre = 'narrative'; 
 export type VideoType = 'story' | 'in2v' | 'IMG'; 
-export type ActiveTab = 'generator' | 'tracker'; 
+export type ActiveTab = 'generator' | 'tracker' | 'results' | 'apikeys'; 
 export type JobStatus = '' | 'Pending' | 'Processing' | 'Generating' | 'Completed' | 'Failed';
 
 export interface ApiKey {
