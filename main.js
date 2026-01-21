@@ -1,3 +1,4 @@
+
 // main.js
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path');
@@ -5,15 +6,15 @@ const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
 const { execFile, spawn, execSync } = require('child_process');
 const XLSX = require('xlsx');
-const crypto = require('crypto'); // Ensure crypto is required
+const crypto = require('crypto');
 
 // Configure logging for autoUpdater
 autoUpdater.logger = require('electron-log');
 autoUpdater.logger.transports.file.level = 'info';
-autoUpdater.autoDownload = true; // Tự động tải về khi có update
+autoUpdater.autoDownload = true; 
 
 const fileWatchers = new Map();
-const folderWatchers = new Map(); // Theo dõi thư mục ảnh
+const folderWatchers = new Map(); 
 const jobStateTimestamps = new Map(); 
 const fileJobStates = new Map();
 
@@ -22,8 +23,6 @@ const configPath = path.join(userDataPath, 'app-config.json');
 const statsPath = path.join(userDataPath, 'stats.json'); 
 let mainWindow;
 
-// --- Security / Activation Helpers ---
-// KHÓA BÍ MẬT - PHẢI GIỐNG HỆT FILE admin-keygen.html
 const ACTIVATION_SECRET = 'your-super-secret-key-for-mv-prompt-generator-pro-2024'; 
 
 function readConfig() {
@@ -46,39 +45,27 @@ function writeConfig(config) {
   }
 }
 
-// Get or Create Machine ID
 function getMachineId() {
     let config = readConfig();
     if (!config.machineId) {
-        config.machineId = crypto.randomUUID(); // UUID chuẩn thường là lowercase
+        config.machineId = crypto.randomUUID();
         writeConfig(config);
     }
     return config.machineId;
 }
 
-// Verify License Key (HMAC-SHA256)
-// Format Key: machineId.signature
 function verifyLicenseKey(machineId, inputKey) {
     try {
         if (!inputKey || !inputKey.includes('.')) return false;
-        
         const parts = inputKey.trim().split('.');
-        // Nếu machineId chứa dấu chấm (ít gặp với UUID nhưng đề phòng), ta lấy phần cuối làm signature
         const inputSignature = parts.pop(); 
         const inputMachineId = parts.join('.');
-
-        // 1. Kiểm tra xem Key này có phải dành cho máy này không
         if (inputMachineId !== machineId) return false;
-
-        // 2. Tính toán lại chữ ký mong đợi
         const hmac = crypto.createHmac('sha256', ACTIVATION_SECRET);
         hmac.update(inputMachineId);
         const expectedSignature = hmac.digest('hex');
-
-        // 3. So sánh (Case-insensitive để an toàn)
         return inputSignature.toLowerCase() === expectedSignature.toLowerCase();
     } catch (e) {
-        console.error("Lỗi xác thực key:", e);
         return false;
     }
 }
@@ -109,32 +96,20 @@ function getFilesFromDirectories(dirs) {
 function scanVideosInternal(jobs, excelFilePath) {
     const rootDir = path.dirname(excelFilePath);
     const excelNameNoExt = path.basename(excelFilePath, '.xlsx');
-    // Thư mục con có tên trùng với tên file Excel (theo yêu cầu)
     const subDir = path.join(rootDir, excelNameNoExt);
-    
-    // Quét cả thư mục gốc và thư mục con
     const resultFiles = getFilesFromDirectories([rootDir, subDir]);
     
     return jobs.map(job => {
-        // Nếu đã có đường dẫn và file tồn tại, giữ nguyên để tối ưu
         if (job.videoPath && fs.existsSync(job.videoPath)) return job;
-        
-        // Pattern: Image_{JOB_ID}_{VIDEO_NAME} hoặc Video_{JOB_ID}_{VIDEO_NAME}
         if (job.id && job.videoName) {
             const specificImgPattern = `Image_${job.id}_${job.videoName}`.toLowerCase();
             const specificVidPattern = `Video_${job.id}_${job.videoName}`.toLowerCase();
-            
             const specificMatch = resultFiles.find(f => {
                 const nameNoExt = path.parse(f).name.toLowerCase();
                 return nameNoExt === specificImgPattern || nameNoExt === specificVidPattern;
             });
-
-            if (specificMatch) {
-                return { ...job, videoPath: specificMatch, status: 'Completed' };
-            }
+            if (specificMatch) return { ...job, videoPath: specificMatch, status: 'Completed' };
         }
-
-        // Fallback: Logic tìm kiếm cũ (tìm tên file chứa videoName)
         if (job.videoName) {
              const cleanName = job.videoName.trim();
              const escapedName = cleanName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -192,120 +167,54 @@ function parseExcelData(data) {
     } catch (e) { return []; }
 }
 
-// === TẠO MENU ỨNG DỤNG ===
 function createApplicationMenu() {
     const template = [
-        {
-            label: 'Tệp (File)',
-            submenu: [
-                { role: 'quit', label: 'Thoát (Exit)' }
-            ]
-        },
-        {
-            label: 'Hiển thị (View)',
-            submenu: [
-                { role: 'reload', label: 'Tải lại trang (Reload)' },
-                { role: 'forceReload', label: 'Tải lại bắt buộc' },
-                { role: 'toggledevtools', label: 'Công cụ lập trình (DevTools)' },
-                { type: 'separator' },
-                { role: 'resetzoom', label: 'Đặt lại thu phóng' },
-                { role: 'zoomin', label: 'Phóng to' },
-                { role: 'zoomout', label: 'Thu nhỏ' },
-                { type: 'separator' },
-                { role: 'togglefullscreen', label: 'Toàn màn hình' }
-            ]
-        },
-        {
-            label: 'Trợ Giúp (Help)',
-            submenu: [
-                {
-                    label: 'Hướng dẫn sử dụng',
-                    click: async () => {
-                        // Mở cửa sổ hướng dẫn mới
-                        const guideWindow = new BrowserWindow({
-                            width: 1024,
-                            height: 800,
-                            autoHideMenuBar: true,
-                            title: 'Hướng dẫn sử dụng V-Manga',
-                            webPreferences: {
-                                nodeIntegration: false,
-                                contextIsolation: true
-                            },
-                            icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
-                        });
-                        
-                        // Xác định đường dẫn file guide.html
-                        const guidePath = app.isPackaged 
-                            ? path.join(__dirname, 'dist', 'guide.html') 
-                            : path.join(__dirname, 'guide.html');
-                        
-                        if (fs.existsSync(guidePath)) {
-                             guideWindow.loadFile(guidePath);
-                        } else {
-                            // Fallback nếu không tìm thấy file
-                            guideWindow.loadURL('data:text/html;charset=utf-8,<h1>Không tìm thấy file hướng dẫn!</h1>');
-                        }
-                    }
-                },
-                { type: 'separator' },
-                { label: 'Phiên bản: ' + app.getVersion(), enabled: false },
-                { label: 'Kiểm tra cập nhật', click: () => autoUpdater.checkForUpdatesAndNotify() },
-                { label: 'Tác giả: V-Manga Team', enabled: false }
-            ]
-        }
+        { label: 'Tệp (File)', submenu: [{ role: 'quit', label: 'Thoát (Exit)' }] },
+        { label: 'Hiển thị (View)', submenu: [{ role: 'reload', label: 'Tải lại trang (Reload)' }, { role: 'forceReload', label: 'Tải lại bắt buộc' }, { role: 'toggledevtools', label: 'Công cụ lập trình (DevTools)' }, { type: 'separator' }, { role: 'resetzoom', label: 'Đặt lại thu phóng' }, { role: 'zoomin', label: 'Phóng to' }, { role: 'zoomout', label: 'Thu nhỏ' }, { type: 'separator' }, { role: 'togglefullscreen', label: 'Toàn màn hình' }] },
+        { label: 'Trợ Giúp (Help)', submenu: [{ label: 'Hướng dẫn sử dụng', click: async () => { const guideWindow = new BrowserWindow({ width: 1024, height: 800, autoHideMenuBar: true, title: 'Hướng dẫn sử dụng V-Manga', webPreferences: { nodeIntegration: false, contextIsolation: true }, icon: getIconPath() }); const guidePath = app.isPackaged ? path.join(__dirname, 'dist', 'guide.html') : path.join(__dirname, 'guide.html'); if (fs.existsSync(guidePath)) guideWindow.loadFile(guidePath); else guideWindow.loadURL('data:text/html;charset=utf-8,<h1>Không tìm thấy file hướng dẫn!</h1>'); } }, { type: 'separator' }, { label: 'Phiên bản: ' + app.getVersion(), enabled: false }, { label: 'Kiểm tra cập nhật', click: () => autoUpdater.checkForUpdatesAndNotify() }, { label: 'Tác giả: V-Manga Team', enabled: false }] }
     ];
-
     const menu = Menu.buildFromTemplate(template);
     Menu.setApplicationMenu(menu);
 }
 
-// --- XỬ LÝ AUTO UPDATER ---
 function setupAutoUpdater() {
-    if (!app.isPackaged) return; // Không chạy trong mode dev
-
-    // Gửi tin nhắn xuống renderer
-    const sendStatusToWindow = (text, type = 'info', data = null) => {
-        if (mainWindow) {
-            mainWindow.webContents.send('update-message', { message: text, type, data });
-        }
-    };
-
-    autoUpdater.on('checking-for-update', () => {
-        sendStatusToWindow('Đang kiểm tra bản cập nhật...', 'checking');
-    });
-    autoUpdater.on('update-available', (info) => {
-        sendStatusToWindow('Phát hiện bản cập nhật mới. Đang tải xuống...', 'available');
-    });
-    autoUpdater.on('update-not-available', (info) => {
-        sendStatusToWindow('Bạn đang sử dụng phiên bản mới nhất.', 'not-available');
-    });
-    autoUpdater.on('error', (err) => {
-        sendStatusToWindow('Lỗi cập nhật: ' + err, 'error');
-    });
-    autoUpdater.on('download-progress', (progressObj) => {
-        let log_message = "Tốc độ: " + progressObj.bytesPerSecond;
-        log_message = log_message + ' - Đã tải ' + progressObj.percent + '%';
-        log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
-        sendStatusToWindow(log_message, 'progress', progressObj);
-    });
-    autoUpdater.on('update-downloaded', (info) => {
-        sendStatusToWindow('Bản cập nhật đã sẵn sàng cài đặt.', 'downloaded', info);
-    });
-
-    // Check ngay khi app ready
+    if (!app.isPackaged) return;
+    const sendStatusToWindow = (text, type = 'info', data = null) => { if (mainWindow) mainWindow.webContents.send('update-message', { message: text, type, data }); };
+    autoUpdater.on('checking-for-update', () => sendStatusToWindow('Đang kiểm tra bản cập nhật...', 'checking'));
+    autoUpdater.on('update-available', (info) => sendStatusToWindow('Phát hiện bản cập nhật mới. Đang tải xuống...', 'available'));
+    autoUpdater.on('update-not-available', (info) => sendStatusToWindow('Bạn đang sử dụng phiên bản mới nhất.', 'not-available'));
+    autoUpdater.on('error', (err) => sendStatusToWindow('Lỗi cập nhật: ' + err, 'error'));
+    autoUpdater.on('download-progress', (progressObj) => sendStatusToWindow(`Tiến độ: ${progressObj.percent}%`, 'progress', progressObj));
+    autoUpdater.on('update-downloaded', (info) => sendStatusToWindow('Bản cập nhật đã sẵn sàng.', 'downloaded', info));
     autoUpdater.checkForUpdatesAndNotify();
+}
+
+/**
+ * Hàm hỗ trợ lấy đường dẫn Icon chuẩn xác
+ */
+function getIconPath() {
+    // Ưu tiên tệp .ico trên Windows và .png trên các hệ điều hành khác cho Taskbar
+    const ext = process.platform === 'win32' ? 'ico' : 'png';
+    // Khi app đóng gói, thư mục assets nằm cùng cấp với main.js hoặc trong dist/
+    const iconPath = app.isPackaged 
+        ? path.join(__dirname, 'assets', `icon.${ext}`)
+        : path.join(__dirname, 'assets', `icon.${ext}`);
+    
+    // Kiểm tra xem file có tồn tại không, nếu không lấy PNG làm dự phòng
+    if (fs.existsSync(iconPath)) return iconPath;
+    return path.join(__dirname, 'assets', 'icon.png');
 }
 
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400, height: 900,
     webPreferences: { contextIsolation: false, nodeIntegration: true },
-    icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
+    icon: getIconPath(), // Cấu hình Icon Taskbar
     backgroundColor: '#ffffff'
   });
   
   createApplicationMenu();
-  setupAutoUpdater(); // Kích hoạt auto updater
+  setupAutoUpdater();
   
   mainWindow.loadFile(app.isPackaged ? path.join(__dirname, 'dist', 'index.html') : 'index.html');
 }
@@ -314,215 +223,36 @@ app.whenReady().then(() => {
   createWindow();
 });
 
-// IPC Handlers
 ipcMain.handle('get-app-config', () => readConfig());
 ipcMain.handle('save-app-config', async (e, cfg) => { writeConfig({ ...readConfig(), ...cfg }); return { success: true }; });
-ipcMain.handle('restart-app-update', () => { autoUpdater.quitAndInstall(); }); // Handler khởi động lại để update
+ipcMain.handle('restart-app-update', () => { autoUpdater.quitAndInstall(); });
+ipcMain.handle('get-machine-id', () => { return { machineId: getMachineId() }; });
+ipcMain.handle('check-activation', () => { return { activated: checkActivationStatus() }; });
+ipcMain.handle('activate-app', (e, key) => { const machineId = getMachineId(); const isValid = verifyLicenseKey(machineId, key); if (isValid) { const config = readConfig(); config.licenseKey = key.trim(); writeConfig(config); return { success: true }; } return { success: false }; });
+ipcMain.handle('save-file-dialog', async (event, { defaultPath, fileContent }) => { const res = await dialog.showSaveDialog(mainWindow, { title: 'Lưu File V-Manga', defaultPath, filters: [{ name: 'Excel', extensions: ['xlsx'] }] }); if (res.filePath) { fs.writeFileSync(res.filePath, Buffer.from(fileContent)); return { success: true, filePath: res.filePath }; } return { success: false }; });
+ipcMain.handle('save-file-custom', async (event, { path: filePath, content }) => { try { fs.mkdirSync(path.dirname(filePath), { recursive: true }); fs.writeFileSync(filePath, Buffer.from(content)); return { success: true }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('open-file-dialog', async () => { const res = await dialog.showOpenDialog(mainWindow, { properties: ['openFile'], filters: [{ name: 'Excel', extensions: ['xlsx'] }] }); if (res.canceled) return { success: false }; const p = res.filePaths[0]; return { success: true, files: [{ path: p, name: path.basename(p), content: fs.readFileSync(p) }] }; });
+ipcMain.handle('open-folder-dialog', async () => { const res = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] }); if (res.canceled) return { success: false }; return { success: true, path: res.filePaths[0] }; });
+ipcMain.handle('read-dir', async (event, dirPath) => { try { const files = fs.readdirSync(dirPath).filter(f => !f.startsWith('.')); const fileList = files.map(f => ({ name: f, fullPath: path.join(dirPath, f) })); return { success: true, files: fileList }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('update-jobs', async (event, { filePath, updates }) => { try { if (!fs.existsSync(filePath)) return { success: false, error: 'File not found' }; const workbook = XLSX.readFile(filePath); const worksheet = workbook.Sheets[workbook.SheetNames[0]]; const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); const headers = data[0]; const idIdx = headers.indexOf('JOB_ID'); const statusIdx = headers.indexOf('STATUS'); if (idIdx === -1 || statusIdx === -1) return { success: false, error: 'Invalid Excel structure' }; let updatedCount = 0; for (let i = 1; i < data.length; i++) { const rowId = data[i][idIdx]; const update = updates.find(u => u.id === rowId); if (update) { data[i][statusIdx] = update.status; updatedCount++; } } const newWs = XLSX.utils.aoa_to_sheet(data); workbook.Sheets[workbook.SheetNames[0]] = newWs; XLSX.writeFile(workbook, filePath); return { success: true, count: updatedCount }; } catch (e) { return { success: false, error: e.message }; } });
+ipcMain.handle('delete-file', async (event, filePath) => { try { if (fs.existsSync(filePath)) { fs.unlinkSync(filePath); return { success: true }; } return { success: true }; } catch (e) { return { success: false, error: e.message }; } });
 
-// --- ACTIVATION IPC HANDLERS ---
-ipcMain.handle('get-machine-id', () => {
-    return { machineId: getMachineId() };
-});
-
-ipcMain.handle('check-activation', () => {
-    return { activated: checkActivationStatus() };
-});
-
-ipcMain.handle('activate-app', (e, key) => {
-    const machineId = getMachineId();
-    const isValid = verifyLicenseKey(machineId, key);
-    
-    if (isValid) {
-        const config = readConfig();
-        config.licenseKey = key.trim();
-        writeConfig(config);
-        return { success: true };
-    }
-    return { success: false };
-});
-// -------------------------------
-
-ipcMain.handle('save-file-dialog', async (event, { defaultPath, fileContent }) => {
-    const res = await dialog.showSaveDialog(mainWindow, { title: 'Lưu File V-Manga', defaultPath, filters: [{ name: 'Excel', extensions: ['xlsx'] }] });
-    if (res.filePath) {
-        fs.writeFileSync(res.filePath, Buffer.from(fileContent));
-        return { success: true, filePath: res.filePath };
-    }
-    return { success: false };
-});
-
-ipcMain.handle('save-file-custom', async (event, { path: filePath, content }) => {
-    try {
-        fs.mkdirSync(path.dirname(filePath), { recursive: true });
-        fs.writeFileSync(filePath, Buffer.from(content));
-        return { success: true };
-    } catch (e) {
-        return { success: false, error: e.message };
-    }
-});
-
-ipcMain.handle('open-file-dialog', async () => {
-    const res = await dialog.showOpenDialog(mainWindow, { properties: ['openFile'], filters: [{ name: 'Excel', extensions: ['xlsx'] }] });
-    if (res.canceled) return { success: false };
-    const p = res.filePaths[0];
-    return { success: true, files: [{ path: p, name: path.basename(p), content: fs.readFileSync(p) }] };
-});
-
-ipcMain.handle('open-folder-dialog', async () => {
-    const res = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
-    if (res.canceled) return { success: false };
-    return { success: true, path: res.filePaths[0] };
-});
-
-ipcMain.handle('read-dir', async (event, dirPath) => {
-    try {
-        const files = fs.readdirSync(dirPath).filter(f => !f.startsWith('.'));
-        const fileList = files.map(f => ({
-            name: f,
-            fullPath: path.join(dirPath, f)
-        }));
-        return { success: true, files: fileList };
-    } catch (e) {
-        return { success: false, error: e.message };
-    }
-});
-
-ipcMain.handle('update-jobs', async (event, { filePath, updates }) => {
-    // updates: array of { id: string, status: string }
-    try {
-        if (!fs.existsSync(filePath)) return { success: false, error: 'File not found' };
-        
-        const workbook = XLSX.readFile(filePath);
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        
-        // Find headers
-        const headers = data[0];
-        const idIdx = headers.indexOf('JOB_ID');
-        const statusIdx = headers.indexOf('STATUS');
-        
-        if (idIdx === -1 || statusIdx === -1) return { success: false, error: 'Invalid Excel structure' };
-
-        let updatedCount = 0;
-        for (let i = 1; i < data.length; i++) {
-            const rowId = data[i][idIdx];
-            const update = updates.find(u => u.id === rowId);
-            if (update) {
-                data[i][statusIdx] = update.status;
-                updatedCount++;
-            }
-        }
-
-        const newWs = XLSX.utils.aoa_to_sheet(data);
-        workbook.Sheets[workbook.SheetNames[0]] = newWs;
-        XLSX.writeFile(workbook, filePath);
-        
-        return { success: true, count: updatedCount };
-    } catch (e) {
-        console.error(e);
-        return { success: false, error: e.message };
-    }
-});
-
-ipcMain.handle('delete-file', async (event, filePath) => {
-    try {
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-            return { success: true };
-        }
-        return { success: true }; // Treat non-exist as success
-    } catch (e) {
-        return { success: false, error: e.message };
-    }
-});
-
-// === QUAN TRỌNG: Hàm xử lý sự kiện file/folder thay đổi ===
-const handleFileOrFolderChange = (event, filePath) => {
-    try {
-        // Debounce nhẹ để tránh gọi liên tục
-        setTimeout(() => {
-            if (!fs.existsSync(filePath)) return;
-            const buf = fs.readFileSync(filePath);
-            const raw = parseExcelData(buf);
-            // Quét lại thư mục để tìm ảnh mới
-            const { updatedJobs } = syncStatsAndState(filePath, raw, false);
-            // Gửi dữ liệu mới nhất về frontend kèm theo danh sách job đã cập nhật đường dẫn ảnh (updatedJobs/discoveredStatus)
-            event.sender.send('file-content-updated', { 
-                path: filePath, 
-                content: buf, 
-                discoveredStatus: updatedJobs // Gửi kèm kết quả quét file
-            });
-        }, 500);
-    } catch(e) {}
-};
+const handleFileOrFolderChange = (event, filePath) => { try { setTimeout(() => { if (!fs.existsSync(filePath)) return; const buf = fs.readFileSync(filePath); const raw = parseExcelData(buf); const { updatedJobs } = syncStatsAndState(filePath, raw, false); event.sender.send('file-content-updated', { path: filePath, content: buf, discoveredStatus: updatedJobs }); }, 500); } catch(e) {} };
 
 ipcMain.on('start-watching-file', (event, filePath) => {
     if (fileWatchers.has(filePath)) return;
-    
-    // 1. Quét lần đầu ngay lập tức và gửi về frontend
-    try { 
-        if (fs.existsSync(filePath)) {
-             const buf = fs.readFileSync(filePath);
-             const raw = parseExcelData(buf);
-             const { updatedJobs } = syncStatsAndState(filePath, raw, true);
-             // Gửi ngay lập tức để frontend hiển thị ảnh nếu đã có
-             event.sender.send('file-content-updated', { 
-                 path: filePath, 
-                 content: buf, 
-                 discoveredStatus: updatedJobs 
-             });
-        }
-    } catch (e) {}
-    
-    // 2. Watch file Excel
-    const fileWatcher = fs.watch(filePath, (ev) => {
-        if (ev === 'change') {
-            handleFileOrFolderChange(event, filePath);
-        }
-    });
+    try { if (fs.existsSync(filePath)) { const buf = fs.readFileSync(filePath); const raw = parseExcelData(buf); const { updatedJobs } = syncStatsAndState(filePath, raw, true); event.sender.send('file-content-updated', { path: filePath, content: buf, discoveredStatus: updatedJobs }); } } catch (e) {}
+    const fileWatcher = fs.watch(filePath, (ev) => { if (ev === 'change') handleFileOrFolderChange(event, filePath); });
     fileWatchers.set(filePath, fileWatcher);
-
-    // 3. Watch thư mục con chứa ảnh (Manga_Output)
     const rootDir = path.dirname(filePath);
     const excelNameNoExt = path.basename(filePath, '.xlsx');
     const subDir = path.join(rootDir, excelNameNoExt);
-
-    if (fs.existsSync(subDir)) {
-        // Watch thư mục con
-        const folderWatcher = fs.watch(subDir, (ev, filename) => {
-            // Khi có file thêm/xóa trong thư mục con, ta trigger reload lại state của file Excel chính
-            handleFileOrFolderChange(event, filePath);
-        });
-        folderWatchers.set(filePath, folderWatcher);
-    } else {
-        const checkInterval = setInterval(() => {
-            if (fs.existsSync(subDir)) {
-                const folderWatcher = fs.watch(subDir, (ev, filename) => {
-                    handleFileOrFolderChange(event, filePath);
-                });
-                folderWatchers.set(filePath, folderWatcher);
-                clearInterval(checkInterval);
-            }
-        }, 5000);
-    }
+    if (fs.existsSync(subDir)) { const folderWatcher = fs.watch(subDir, (ev, filename) => handleFileOrFolderChange(event, filePath)); folderWatchers.set(filePath, folderWatcher); }
 });
 
-ipcMain.on('stop-watching-file', (e, p) => { 
-    if (fileWatchers.has(p)) { fileWatchers.get(p).close(); fileWatchers.delete(p); }
-    if (folderWatchers.has(p)) { folderWatchers.get(p).close(); folderWatchers.delete(p); }
-});
-
+ipcMain.on('stop-watching-file', (e, p) => { if (fileWatchers.has(p)) { fileWatchers.get(p).close(); fileWatchers.delete(p); } if (folderWatchers.has(p)) { folderWatchers.get(p).close(); folderWatchers.delete(p); } });
 ipcMain.on('open-folder', (e, p) => fs.existsSync(p) && shell.openPath(p));
 ipcMain.on('open-video-path', (e, p) => fs.existsSync(p) && shell.openPath(p));
-
 ipcMain.handle('check-ffmpeg', async () => ({ found: fs.existsSync(getFfmpegPath()) }));
-ipcMain.handle('open-tool-flow', async () => {
-    const p = readConfig().toolFlowPath;
-    if (p && fs.existsSync(p)) { spawn(p, [], { detached: true, stdio: 'ignore' }).unref(); return { success: true }; }
-    return { success: false };
-});
-ipcMain.handle('set-tool-flow-path', async () => {
-    const res = await dialog.showOpenDialog(mainWindow, { properties: ['openFile'], filters: [{ name: 'Executables', extensions: ['exe'] }] });
-    if (!res.canceled) { writeConfig({ ...readConfig(), toolFlowPath: res.filePaths[0] }); return { success: true, path: res.filePaths[0] }; }
-    return { success: false };
-});
+ipcMain.handle('open-tool-flow', async () => { const p = readConfig().toolFlowPath; if (p && fs.existsSync(p)) { spawn(p, [], { detached: true, stdio: 'ignore' }).unref(); return { success: true }; } return { success: false }; });
+ipcMain.handle('set-tool-flow-path', async () => { const res = await dialog.showOpenDialog(mainWindow, { properties: ['openFile'], filters: [{ name: 'Executables', extensions: ['exe'] }] }); if (!res.canceled) { writeConfig({ ...readConfig(), toolFlowPath: res.filePaths[0] }); return { success: true, path: res.filePaths[0] }; } return { success: false }; });
