@@ -1,16 +1,40 @@
 
-import React, { useState } from 'react';
-import { VideoJob, ActiveTab, TrackedFile } from './types';
-import { MangaProcessor } from './components/Generator';
-import { Tracker } from './components/Tracker';
-import { getIpcRenderer } from './utils/platform';
+import React, { useState, useEffect } from 'react';
+import { VideoJob, ActiveTab, TrackedFile } from './types.ts';
+import { MangaProcessor } from './components/Generator.tsx';
+import { Tracker } from './components/Tracker.tsx';
+import { Activation } from './components/Activation.tsx';
+import { getIpcRenderer } from './utils/platform.ts';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('generator');
   const [trackedFiles, setTrackedFiles] = useState<TrackedFile[]>([]);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
+  const [isActivated, setIsActivated] = useState(false);
+  const [machineId, setMachineId] = useState('');
 
   const ipcRenderer = getIpcRenderer();
+
+  useEffect(() => {
+    // Giả lập lấy machineId
+    const mid = localStorage.getItem('v_manga_machine_id') || crypto.randomUUID();
+    localStorage.setItem('v_manga_machine_id', mid);
+    setMachineId(mid);
+
+    // Kiểm tra bản quyền đã lưu
+    const savedKey = localStorage.getItem('v_manga_license');
+    if (savedKey) setIsActivated(true);
+  }, []);
+
+  const handleActivate = async (key: string) => {
+    // Giả lập kiểm tra key (Trong thực tế sẽ gọi API hoặc kiểm tra thuật toán)
+    if (key.length > 10) {
+      localStorage.setItem('v_manga_license', key);
+      setIsActivated(true);
+      return true;
+    }
+    return false;
+  };
 
   const handleProcessingComplete = (path: string, jobs: VideoJob[]) => {
     const fileName = path.split(/[\\/]/).pop() || 'Project';
@@ -23,8 +47,6 @@ const App: React.FC = () => {
   const handleShowFolder = async (filePath: string) => {
     if (ipcRenderer) {
       await ipcRenderer.invoke('show-item-in-folder', filePath);
-    } else {
-      console.log("Show Folder (Web Mock):", filePath);
     }
   };
 
@@ -32,7 +54,6 @@ const App: React.FC = () => {
     setTrackedFiles(prev => {
       const next = [...prev];
       if (next[activeFileIndex]) {
-        // Cập nhật lastUpdated để force reload ảnh thông qua query string ?v=...
         next[activeFileIndex].jobs = next[activeFileIndex].jobs.map(job => ({
           ...job,
           lastUpdated: Date.now()
@@ -42,10 +63,13 @@ const App: React.FC = () => {
     });
   };
 
+  if (!isActivated) {
+    return <Activation machineId={machineId} onActivate={handleActivate} />;
+  }
+
   return (
-    <div className="min-h-screen bg-tet-cream font-comic flex flex-col">
+    <div className="min-h-screen bg-tet-cream font-comic flex flex-col relative z-10">
       <header className="bg-white border-b-4 border-black p-4 flex flex-col md:flex-row justify-between items-center shadow-md gap-4 relative overflow-hidden">
-        {/* Manga background element in header */}
         <div className="absolute top-0 right-0 w-32 h-full opacity-5 pointer-events-none bg-[repeating-linear-gradient(45deg,#000,#000_10px,#fff_10px,#fff_20px)]"></div>
         
         <div className="flex items-center gap-4 relative z-10">
@@ -105,7 +129,6 @@ const App: React.FC = () => {
                 isCombining={false}
                 onPlayVideo={(path) => {
                   if(ipcRenderer) ipcRenderer.invoke('open-path', path);
-                  else console.log("Play Mock", path);
                 }}
                 onShowFolder={handleShowFolder}
                 onOpenToolFlows={() => {
@@ -124,7 +147,7 @@ const App: React.FC = () => {
         )}
       </main>
       
-      <footer className="bg-black text-white text-[10px] py-1 px-4 flex justify-between uppercase font-bold tracking-widest">
+      <footer className="bg-black text-white text-[10px] py-1 px-4 flex justify-between uppercase font-bold tracking-widest relative z-10">
         <span>V-MANGA ENTERPRISE © 2026</span>
         <span className="text-manga-accent">Industrial Production Workflow</span>
       </footer>
