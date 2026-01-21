@@ -32,30 +32,9 @@ export interface TrackedFile {
 }
 
 export interface AppConfig {
-  machineId?: string;
+  machineId: string;
   licenseKey?: string; 
-  lastFolder?: string;
-  toolFlowPath?: string;
-}
-
-// Added Scene interface for Results component
-export interface Scene {
-  scene_number: number;
-  scene_title: string;
-  prompt_text: string;
-}
-
-// Added ApiKey interface for ApiKeyManager component
-export interface ApiKey {
-  id: string;
-  name: string;
-  value: string;
-}
-
-// Added Stats interfaces for AppModals component
-export interface StatsHistoryItem {
-  date: string;
-  count: number;
+  isActivated: boolean;
 }
 
 export interface StatsData {
@@ -63,6 +42,21 @@ export interface StatsData {
   total: number;
   promptCount: number;
   totalCredits: number;
-  history: StatsHistoryItem[];
+  history: { date: string; count: number }[];
+  // Added to track model usage quotas per API key
   modelUsage?: Record<string, Record<string, number>>;
+}
+
+// Added missing Scene interface for Results component
+export interface Scene {
+  scene_number: number;
+  scene_title: string;
+  prompt_text: string;
+}
+
+// Added missing ApiKey interface for ApiKeyManager component
+export interface ApiKey {
+  id: string;
+  name: string;
+  value: string;
 }

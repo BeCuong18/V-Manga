@@ -16,17 +16,25 @@ const App: React.FC = () => {
   const ipcRenderer = getIpcRenderer();
 
   useEffect(() => {
-    const mid = localStorage.getItem('v_manga_machine_id') || crypto.randomUUID();
-    localStorage.setItem('v_manga_machine_id', mid);
-    setMachineId(mid);
+    // FIX: Đảm bảo Machine ID không bao giờ bị thay đổi nếu đã tồn tại
+    let savedMid = localStorage.getItem('v_manga_machine_id');
+    if (!savedMid) {
+        savedMid = crypto.randomUUID();
+        localStorage.setItem('v_manga_machine_id', savedMid);
+    }
+    setMachineId(savedMid);
 
+    // Kiểm tra bản quyền
     const savedKey = localStorage.getItem('v_manga_license');
-    if (savedKey) setIsActivated(true);
+    if (savedKey) {
+        setIsActivated(true);
+    }
   }, []);
 
   const handleActivate = async (key: string) => {
-    if (key.length > 10) {
-      localStorage.setItem('v_manga_license', key);
+    // Logic xác thực Key (Ví dụ: Key dài hơn 10 ký tự)
+    if (key.trim().length > 10) {
+      localStorage.setItem('v_manga_license', key.trim());
       setIsActivated(true);
       return true;
     }
@@ -39,12 +47,6 @@ const App: React.FC = () => {
     setTrackedFiles(prev => [...prev, newFile]);
     setActiveFileIndex(trackedFiles.length);
     setActiveTab('tracker');
-  };
-
-  const handleShowFolder = async (filePath: string) => {
-    if (ipcRenderer) {
-      await ipcRenderer.invoke('show-item-in-folder', filePath);
-    }
   };
 
   const handleReload = () => {
@@ -70,19 +72,19 @@ const App: React.FC = () => {
         <div className="absolute top-0 right-0 w-32 h-full opacity-5 pointer-events-none bg-[repeating-linear-gradient(45deg,#000,#000_10px,#fff_10px,#fff_20px)]"></div>
         
         <div className="flex items-center gap-4 relative z-10">
-          <div className="w-12 h-12 border-4 border-black bg-manga-accent shadow-comic transform -rotate-3 overflow-hidden flex-shrink-0 cursor-pointer" onClick={() => setActiveTab('generator')}>
+          <div className="w-12 h-12 border-4 border-black bg-manga-accent shadow-comic transform -rotate-3 overflow-hidden flex-shrink-0">
              <img 
-               src="assets/icon.png" 
+               src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM8.5 15l-1.5-2L5 17h14l-3.5-4.5-2.5 3z'/%3E%3C/svg%3E"
                alt="V-Manga Logo" 
-               className="w-full h-full object-cover"
-               onError={(e) => {
-                 e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM8.5 15l-1.5-2L5 17h14l-3.5-4.5-2.5 3z'/%3E%3C/svg%3E";
-               }}
+               className="w-full h-full p-2"
              />
           </div>
-          <h1 className="text-2xl md:text-3xl font-black text-tet-red uppercase tracking-tighter drop-shadow-sm">
-            V-MANGA <span className="text-black">STUDIO</span>
-          </h1>
+          <div>
+            <h1 className="text-2xl font-black text-tet-red uppercase tracking-tighter drop-shadow-sm leading-none">
+                V-MANGA <span className="text-black">STUDIO</span>
+            </h1>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Standard Edition</p>
+          </div>
         </div>
 
         <div className="flex gap-4 relative z-10">
@@ -127,10 +129,8 @@ const App: React.FC = () => {
                 onPlayVideo={(path) => {
                   if(ipcRenderer) ipcRenderer.invoke('open-path', path);
                 }}
-                onShowFolder={handleShowFolder}
-                onOpenToolFlows={() => {
-                   if(ipcRenderer) ipcRenderer.invoke('run-tool');
-                }}
+                onShowFolder={(p) => { if(ipcRenderer) ipcRenderer.invoke('show-item-in-folder', p); }}
+                onOpenToolFlows={() => { if(ipcRenderer) ipcRenderer.invoke('run-tool'); }}
                 onSetToolFlowPath={() => {}}
                 onReloadVideos={handleReload}
                 onRetryStuck={() => {}}
