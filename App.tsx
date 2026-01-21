@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { VideoJob, ActiveTab, TrackedFile } from './types';
 import { MangaProcessor } from './components/Generator';
@@ -27,15 +28,18 @@ const App: React.FC = () => {
     }
   };
 
-  const handleReload = async () => {
-    if (ipcRenderer && trackedFiles[activeFileIndex]?.path) {
-      const currentPath = trackedFiles[activeFileIndex].path;
-      // In a real implementation, you would trigger a directory scan or re-parse the excel
-      // For now, let's signal the UI to refresh local file URLs (handled by timestamps in Tracker)
-      console.log("Reloading data for:", currentPath);
-      // We can trigger a re-render or a specific IPC call if needed
-      setTrackedFiles(prev => [...prev]); // Force state refresh
-    }
+  const handleReload = () => {
+    setTrackedFiles(prev => {
+      const next = [...prev];
+      if (next[activeFileIndex]) {
+        // Cập nhật lastUpdated để force reload ảnh thông qua query string ?v=...
+        next[activeFileIndex].jobs = next[activeFileIndex].jobs.map(job => ({
+          ...job,
+          lastUpdated: Date.now()
+        }));
+      }
+      return next;
+    });
   };
 
   return (
