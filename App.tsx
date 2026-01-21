@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { VideoJob, ActiveTab, TrackedFile } from './types.ts';
-import { MangaProcessor } from './components/Generator.tsx';
-import { Tracker } from './components/Tracker.tsx';
-import { Activation } from './components/Activation.tsx';
-import { getIpcRenderer } from './utils/platform.ts';
+import { VideoJob, ActiveTab, TrackedFile } from './types';
+import { MangaProcessor } from './components/Generator';
+import { Tracker } from './components/Tracker';
+import { Activation } from './components/Activation';
+import { getIpcRenderer } from './utils/platform';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('generator');
@@ -16,18 +16,15 @@ const App: React.FC = () => {
   const ipcRenderer = getIpcRenderer();
 
   useEffect(() => {
-    // Giả lập lấy machineId
     const mid = localStorage.getItem('v_manga_machine_id') || crypto.randomUUID();
     localStorage.setItem('v_manga_machine_id', mid);
     setMachineId(mid);
 
-    // Kiểm tra bản quyền đã lưu
     const savedKey = localStorage.getItem('v_manga_license');
     if (savedKey) setIsActivated(true);
   }, []);
 
   const handleActivate = async (key: string) => {
-    // Giả lập kiểm tra key (Trong thực tế sẽ gọi API hoặc kiểm tra thuật toán)
     if (key.length > 10) {
       localStorage.setItem('v_manga_license', key);
       setIsActivated(true);

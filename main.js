@@ -2,7 +2,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const XLSX = require('xlsx');
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -11,24 +10,34 @@ function createWindow() {
     webPreferences: {
       contextIsolation: false,
       nodeIntegration: true,
-      webSecurity: false // Cho phép load ảnh từ ổ đĩa local qua giao thức file://
+      webSecurity: false 
     },
     icon: path.join(__dirname, 'assets/icon.png')
   });
 
-  // Nếu là môi trường dev, có thể trỏ tới localhost:5173 của Vite
-  // Ở đây mặc định load file index.html được build
-  mainWindow.loadFile('index.html');
+  // Kiểm tra xem file đã được build trong dist chưa
+  const distPath = path.join(__dirname, 'dist', 'index.html');
+  const rootPath = path.join(__dirname, 'index.html');
+
+  if (fs.existsSync(distPath)) {
+    mainWindow.loadFile(distPath);
+  } else if (fs.existsSync(rootPath)) {
+    // Nếu chưa build (môi trường dev), load file gốc
+    mainWindow.loadFile(rootPath);
+  } else {
+    console.error('Không tìm thấy file index.html để khởi động!');
+  }
+
+  // Mở DevTools tự động nếu trong môi trường phát triển để dễ debug lỗi trắng màn hình
+  // mainWindow.webContents.openDevTools();
 }
 
 app.whenReady().then(() => {
   createWindow();
 
-  // --- IPC Handlers cho File/Folder ---
+  // IPC Handlers
   ipcMain.handle('open-folder-dialog', async () => {
-    const result = await dialog.showOpenDialog({
-      properties: ['openDirectory']
-    });
+    const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
     if (result.canceled) return { success: false };
     return { success: true, path: result.filePaths[0] };
   });
@@ -47,10 +56,7 @@ app.whenReady().then(() => {
   ipcMain.handle('read-dir', async (event, dirPath) => {
     try {
       const files = fs.readdirSync(dirPath);
-      const fileList = files.map(f => ({
-        name: f,
-        fullPath: path.join(dirPath, f)
-      }));
+      const fileList = files.map(f => ({ name: f, fullPath: path.join(dirPath, f) }));
       return { success: true, files: fileList };
     } catch (err) {
       return { success: false, error: err.message };
@@ -97,14 +103,13 @@ app.whenReady().then(() => {
     return { success: false, error: 'Path not found' };
   });
 
-  // --- Giả lập quản trị (Stats/Admin) ---
   ipcMain.handle('get-stats', async () => {
     return {
-        machineId: "DEV-MACHINE-001",
-        total: 150,
-        promptCount: 450,
-        totalCredits: 1200,
-        history: [{date: "2024-01-20", count: 12}, {date: "2024-01-19", count: 25}]
+        machineId: "V-MANGA-PRO-001",
+        total: 0,
+        promptCount: 0,
+        totalCredits: 0,
+        history: []
     };
   });
 });
